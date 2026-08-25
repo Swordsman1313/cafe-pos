@@ -35,9 +35,6 @@ import {
   Grid3X3,
   UserCheck,
   DollarSign,
-  Flame,
-  Utensils,
-  Sparkles,
 } from "lucide-react";
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
@@ -62,11 +59,10 @@ interface CartItem {
   price: number;
   basePrice: number;
   qty: number;
-  size?: string; // "S" | "M" | "L"
+  size?: string; // "Small" | "Medium" | "Large"
   sweetness?: string; // "0%" | "30%" | "50%" | "70%" | "100%"
-  ice?: string; // "No Ice" | "30%" | "50%" | "70%" | "Full"
-  notes?: string; // "Hot" | "Iced" | "Warm Up" | "Normal Temp"
-  portion?: string; // "Whole" | "Cut in Half"
+  ice?: string; // "No Ice" | "Less Ice" | "Normal Ice" | "Extra Ice"
+  notes?: string; // "Hot" | "Iced" | "Warm Up" | "No Warm Up"
 }
 
 interface ShiftState {
@@ -86,7 +82,7 @@ interface CompletedOrderRecord {
   id: string;
   ticketNumber: string;
   timestamp: string;
-  items: { name: string; qty: number; total: number; modifiers?: string }[];
+  items: { name: string; qty: number; unitPrice: number; total: number; modifiers?: string }[];
   subtotal: number;
   tax: number;
   total: number;
@@ -138,10 +134,9 @@ interface CustomerItem {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Constants & Config                                                */
+/*  Constants & Currency Helpers                                      */
 /* ------------------------------------------------------------------ */
 
-// Standard Cambodian Exchange Rate: $1 = 4,100 KHR
 const KHR_RATE = 4100;
 
 const roundKHR = (khr: number): number => {
@@ -174,7 +169,7 @@ const INITIAL_CUSTOMERS: CustomerItem[] = [
   { id: "c4", name: "Kosal Vong", phone: "096 445 566", points: 310, tier: "Gold" },
 ];
 
-// High-density product list (clean & compact)
+// High-density product catalog
 const PRODUCTS: ProductItem[] = [
   { id: "p1", name: "Espresso", category: "espresso", price: 2.25, customizable: true },
   { id: "p2", name: "Americano", category: "espresso", price: 2.75, customizable: true },
@@ -194,10 +189,10 @@ const PRODUCTS: ProductItem[] = [
   { id: "p16", name: "Mocha Frappe", category: "frappe", price: 4.75, customizable: true },
   { id: "p17", name: "Caramel Frappe", category: "frappe", price: 4.75, customizable: true },
   { id: "p18", name: "Matcha Frappe", category: "frappe", price: 4.75, customizable: true },
-  { id: "p19", name: "Butter Croissant", category: "pastries", price: 2.50, customizable: false },
-  { id: "p20", name: "Pain au Chocolat", category: "pastries", price: 3.00, customizable: false },
-  { id: "p21", name: "Almond Croissant", category: "pastries", price: 3.50, customizable: false },
-  { id: "p22", name: "Blueberry Muffin", category: "pastries", price: 2.75, customizable: false },
+  { id: "p19", name: "Butter Croissant", category: "pastries", price: 2.50, customizable: true },
+  { id: "p20", name: "Pain au Chocolat", category: "pastries", price: 3.00, customizable: true },
+  { id: "p21", name: "Almond Croissant", category: "pastries", price: 3.50, customizable: true },
+  { id: "p22", name: "Blueberry Muffin", category: "pastries", price: 2.75, customizable: true },
   { id: "p23", name: "Cheesecake Slice", category: "pastries", price: 4.00, customizable: false },
   { id: "p24", name: "Chocolate Brownie", category: "pastries", price: 3.00, customizable: false },
 ];
@@ -226,8 +221,9 @@ const formatKHRDirect = (khrVal: number) => `${Math.round(khrVal).toLocaleString
 
 type CartAction =
   | { type: "ADD_PRODUCT"; product: ProductItem }
+  | { type: "INCREMENT_QTY"; cartId: string }
   | { type: "UPDATE_QTY"; cartId: string; qty: number }
-  | { type: "UPDATE_MODIFIER"; cartId: string; field: "size" | "sweetness" | "ice" | "notes" | "portion"; value: string }
+  | { type: "UPDATE_MODIFIER"; cartId: string; field: "size" | "sweetness" | "ice" | "notes"; value: string }
   | { type: "SET_CART"; items: CartItem[] }
   | { type: "CLEAR" };
 
@@ -247,9 +243,11 @@ function cartReducer(state: CartItem[], action: CartAction): CartItem[] {
         sweetness: undefined,
         ice: undefined,
         notes: undefined,
-        portion: undefined,
       };
       return [...state, newItem];
+    }
+    case "INCREMENT_QTY": {
+      return state.map((i) => (i.cartId === action.cartId ? { ...i, qty: i.qty + 1 } : i));
     }
     case "UPDATE_QTY": {
       if (action.qty <= 0) {
@@ -263,10 +261,10 @@ function cartReducer(state: CartItem[], action: CartAction): CartItem[] {
         const nextVal = item[action.field] === action.value ? undefined : action.value;
         const nextItem = { ...item, [action.field]: nextVal };
 
-        // Price recalculation if size changes
+        // Price adjustments by size
         let sizeExtra = 0;
-        if (nextItem.size === "M") sizeExtra = 0.3;
-        else if (nextItem.size === "L") sizeExtra = 0.6;
+        if (nextItem.size === "Medium (+$0.30)") sizeExtra = 0.3;
+        else if (nextItem.size === "Large (+$0.60)") sizeExtra = 0.6;
         nextItem.price = nextItem.basePrice + sizeExtra;
 
         return nextItem;
@@ -289,10 +287,10 @@ function getMissingModifiers(item: CartItem): string[] {
   const product = PRODUCTS.find((p) => p.id === item.productId);
   if (!product || !product.customizable) return [];
 
-  // Conditional logic: Only beverage categories require Temp, Size, Sugar, Ice
+  // Conditional: Only beverage categories require Temp, Size, Sugar, Ice
   if (product.category === "espresso" || product.category === "tea" || product.category === "frappe") {
     const missing: string[] = [];
-    if (!item.notes) missing.push("Mood/Temp");
+    if (!item.notes) missing.push("Temp");
     if (!item.size) missing.push("Size");
     if (!item.sweetness) missing.push("Sugar");
     if (!item.ice) missing.push("Ice");
@@ -318,14 +316,14 @@ function validateCartForCheckout(cart: CartItem[]): {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Main POS Component                                                */
+/*  Main POS Register Page Component                                  */
 /* ------------------------------------------------------------------ */
 
 export default function PosRegisterPage() {
   const [activeNav, setActiveNav] = useState<"register" | "orders" | "tables" | "customers">("register");
   const [currentStaff, setCurrentStaff] = useState<StaffUser>(STAFF_LIST[0]);
 
-  // Real-time live digital clock
+  // Real-time live digital clock (HH:mm:ss A)
   const [currentTime, setCurrentTime] = useState<string>("");
   useEffect(() => {
     const updateTime = () => {
@@ -337,7 +335,7 @@ export default function PosRegisterPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Shift State with Unclosed Shift Date Tracker
+  // Shift State & Unclosed Shift Date Tracker
   const [shift, setShift] = useState<ShiftState>(() => {
     const openedDate = new Date();
     return {
@@ -395,7 +393,7 @@ export default function PosRegisterPage() {
 
   // Order Details
   const [ticketNumber, setTicketNumber] = useState<string>(() => `T-${Math.floor(100 + Math.random() * 900)}`);
-  const [orderChannel, setOrderChannel] = useState<"WALK-IN" | "TAKEAWAY" | "DELIVERY">("WALK-IN");
+  const [orderChannel, setOrderChannel] = useState<"Walk-in" | "Takeaway" | "Delivery">("Walk-in");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerItem | null>(null);
   const [discountUSD, setDiscountUSD] = useState<number>(0);
@@ -551,15 +549,22 @@ export default function PosRegisterPage() {
   };
 
   /* ------------------------------------------------------------------ */
-  /*  Action Handlers                                                   */
+  /*  Card Tap Handler (Add or Increment Qty + Focus)                   */
   /* ------------------------------------------------------------------ */
 
-  const handleAddProduct = (product: ProductItem) => {
+  const handleProductCardClick = (product: ProductItem) => {
     soundFX.playBlip(880);
-    dispatch({ type: "ADD_PRODUCT", product });
+    // Check if the currently active item matches this product
+    if (activeItem && activeItem.productId === product.id) {
+      dispatch({ type: "INCREMENT_QTY", cartId: activeItem.cartId });
+    } else {
+      // Add as new line item and focus it
+      dispatch({ type: "ADD_PRODUCT", product });
+      setActiveCartId(null); // will automatically point to latest item
+    }
   };
 
-  const handleSelectModifierChip = (field: "size" | "sweetness" | "ice" | "notes" | "portion", value: string) => {
+  const handleSelectModifierChip = (field: "size" | "sweetness" | "ice" | "notes", value: string) => {
     if (!activeItem) return;
     soundFX.playBlip(920);
     dispatch({ type: "UPDATE_MODIFIER", cartId: activeItem.cartId, field, value });
@@ -576,7 +581,6 @@ export default function PosRegisterPage() {
       return;
     }
 
-    // MANDATORY MODIFIER ENFORCEMENT FOR BEVERAGES
     const validation = validateCartForCheckout(cart);
     if (!validation.valid && validation.errorItem) {
       soundFX.playWarning();
@@ -617,8 +621,9 @@ export default function PosRegisterPage() {
       items: cart.map((i) => ({
         name: i.name,
         qty: i.qty,
+        unitPrice: i.price,
         total: i.price * i.qty,
-        modifiers: [i.notes, i.size, i.sweetness ? `${i.sweetness} Sugar` : "", i.ice ? `${i.ice} Ice` : "", i.portion].filter(Boolean).join(" · "),
+        modifiers: [i.notes, i.size, i.sweetness ? `${i.sweetness} Sugar` : "", i.ice ? `${i.ice}` : ""].filter(Boolean).join(" · "),
       })),
       subtotal: rawSubtotal,
       tax,
@@ -690,18 +695,18 @@ export default function PosRegisterPage() {
     setDiscountUSD(0);
     setSelectedTable(null);
     setTicketNumber(`T-${Math.floor(100 + Math.random() * 900)}`);
-    showNotification("Order Held ⏸️", `Order parked in held queue.`, "info");
+    showNotification("Order Held ⏸️", `Order parked in held drawer.`, "info");
   };
 
   const handleResumeHeldOrder = (held: HeldOrder) => {
     soundFX.playBlip(800);
     dispatch({ type: "SET_CART", items: held.cart });
-    setOrderChannel(held.channel as "WALK-IN" | "TAKEAWAY" | "DELIVERY");
+    setOrderChannel(held.channel as "Walk-in" | "Takeaway" | "Delivery");
     if (held.table) setSelectedTable(held.table);
     setHeldOrders((prev) => prev.filter((o) => o.id !== held.id));
     setShowHeldOrdersModal(false);
     setActiveNav("register");
-    showNotification("Order Resumed ▶️", `Loaded ${held.cart.length} items to active billing.`, "success");
+    showNotification("Order Resumed ▶️", `Restored ${held.cart.length} items to billing.`, "success");
   };
 
   const handleDiscardHeldOrder = (id: string) => {
@@ -709,13 +714,13 @@ export default function PosRegisterPage() {
     setHeldOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
-  // Determine active item category type for conditional modifier panel
+  // Category-Aware Modifier Determination
   const activeIsBeverage = activeItem && (activeItem.category === "espresso" || activeItem.category === "tea" || activeItem.category === "frappe");
   const activeIsPastry = activeItem && activeItem.category === "pastries";
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden font-sans antialiased select-none" style={{ background: "#FDFBF9" }}>
-      {/* ── Top Bar: Real-Time Clock, Business Shift Date & Unclosed Alert ── */}
+      {/* ── Top Bar: Real-Time Clock & Shift Tracker ── */}
       <header className="shrink-0 h-13 px-6 border-b border-stone-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between z-30">
         <div className="flex items-center gap-4">
           <div
@@ -734,7 +739,7 @@ export default function PosRegisterPage() {
           </div>
         </div>
 
-        {/* Center: Shift Business Date & Unclosed Shift Alert */}
+        {/* Center: Shift Business Date Alert */}
         <div className="flex items-center gap-2">
           {shiftAlertInfo?.isUnclosedPriorDay ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-300 text-rose-800 text-xs font-black animate-pulse">
@@ -749,17 +754,17 @@ export default function PosRegisterPage() {
 
           {selectedTable && (
             <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-800 text-[11px] font-black border border-stone-200">
-              🪑 {selectedTable}
+              Table: {selectedTable}
             </span>
           )}
           {selectedCustomer && (
             <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[11px] font-black border border-emerald-200">
-              👤 {selectedCustomer.name}
+              Customer: {selectedCustomer.name}
             </span>
           )}
         </div>
 
-        {/* Right: Online Sync & Quick Operations */}
+        {/* Right: Online Indicator & Operations */}
         <div className="flex items-center gap-2">
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black border ${
@@ -781,14 +786,14 @@ export default function PosRegisterPage() {
         </div>
       </header>
 
-      {/* ── Main Viewport Area (Workspace + Cart Sidebar) ─────────────── */}
+      {/* ── Main Viewport Area (Catalog Workspace + Cart Sidebar) ──────── */}
       <div className="flex flex-1 min-h-0 w-full overflow-hidden">
-        {/* ── Main Left Workspace (Catalog & Condiment Panel) ───────── */}
+        {/* ── Left Workspace: High-Density Catalog & Stacked Modifier Panel ── */}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden" style={{ background: "#FDFBF9" }}>
           {activeNav === "register" && (
             <>
-              {/* Category Tabs & Quick Search */}
-              <div className="shrink-0 px-6 pt-3 pb-2 border-b border-stone-200/60 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-4">
+              {/* Category Pills & Quick Search */}
+              <div className="shrink-0 px-5 pt-2.5 pb-2 border-b border-stone-200/60 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-4">
                 <div className="flex items-center gap-1 flex-1 min-w-0">
                   <button
                     type="button"
@@ -833,12 +838,12 @@ export default function PosRegisterPage() {
                   </button>
                 </div>
 
-                <div className="relative w-48 shrink-0">
+                <div className="relative w-44 shrink-0">
                   <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search..."
+                    placeholder="Search menu..."
                     className="h-8 w-full rounded-xl bg-stone-100/90 pl-8 pr-6 text-xs font-medium text-stone-800 outline-none transition-all placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-stone-800"
                   />
                   {query && (
@@ -853,19 +858,20 @@ export default function PosRegisterPage() {
                 </div>
               </div>
 
-              {/* ── High-Density Product Grid (Compact Cards) ── */}
-              <div className="flex-1 overflow-y-auto px-6 py-3 min-h-0">
-                <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-2.5">
+              {/* ── High-Density Product Grid: Compact Horizontal Tiles (12-20 per screen) ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-2.5 min-h-0">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                   {filteredProducts.map((product) => {
                     const ProductIcon = CATEGORY_ICON[product.category] || Coffee;
                     return (
                       <div
                         key={product.id}
-                        onClick={() => handleAddProduct(product)}
-                        className="group bg-white rounded-2xl border border-stone-200/90 p-2.5 flex flex-col justify-between hover:border-stone-400 hover:shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                        onClick={() => handleProductCardClick(product)}
+                        className="group bg-white rounded-2xl border border-stone-200/90 p-2 flex items-center gap-2.5 hover:border-stone-400 hover:shadow-xs transition-all active:scale-[0.98] cursor-pointer"
                       >
+                        {/* Square Thumbnail on Left */}
                         <div
-                          className="h-16 w-full rounded-xl flex items-center justify-center text-white shadow-2xs group-hover:scale-[1.02] transition-transform"
+                          className="h-12 w-12 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
                           style={{
                             background:
                               product.category === "espresso"
@@ -877,17 +883,20 @@ export default function PosRegisterPage() {
                                 : "linear-gradient(135deg, #C28B5E, #8C5933)",
                           }}
                         >
-                          <ProductIcon size={24} />
+                          <ProductIcon size={20} />
                         </div>
 
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="min-w-0 flex-1 pr-1">
-                            <h3 className="font-black text-xs text-stone-900 leading-snug truncate group-hover:text-amber-950">{product.name}</h3>
-                            <span className="text-[10px] font-bold text-stone-400">{formatKHRDirect(roundKHR(product.price * KHR_RATE))}</span>
+                        {/* Title & Dual Price on Right */}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-black text-xs text-stone-900 leading-tight truncate group-hover:text-amber-950">
+                            {product.name}
+                          </h3>
+                          <div className="flex items-baseline gap-1.5 mt-0.5">
+                            <span className="text-xs font-black text-stone-900">{formatUSD(product.price)}</span>
+                            <span className="text-[10px] font-bold text-stone-400">
+                              {formatKHRDirect(roundKHR(product.price * KHR_RATE))}
+                            </span>
                           </div>
-                          <span className="text-xs font-black text-stone-900 shrink-0 bg-stone-50 px-1.5 py-0.5 rounded border border-stone-200">
-                            {formatUSD(product.price)}
-                          </span>
                         </div>
                       </div>
                     );
@@ -895,10 +904,10 @@ export default function PosRegisterPage() {
                 </div>
               </div>
 
-              {/* ── Vertical Stacking Modifier Panel (Dedicated Row per Group) ── */}
+              {/* ── Dynamic, Stacked Modifier Panel (1 Dedicated Row Per Category) ── */}
               {activeItem && (activeIsBeverage || activeIsPastry) && (
-                <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-6 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
-                  {/* Header */}
+                <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-6 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
+                  {/* Context Header */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">Condiments for:</span>
@@ -911,48 +920,43 @@ export default function PosRegisterPage() {
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-stone-400 font-semibold">Dedicated Rows · Equal Touch Buttons</span>
+                    <span className="text-[10px] text-stone-400 font-semibold">1 Row Per Group · Equal Width Buttons</span>
                   </div>
 
-                  {/* Vertical Stack of Modifier Rows */}
+                  {/* Multi-Row Vertical Stack */}
                   {activeIsBeverage ? (
                     <div className="flex flex-col gap-2">
-                      {/* Row 1: Temp / Mood */}
+                      {/* Row 1 — Temp */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-black text-stone-600 uppercase">Mood / Temp:</span>
+                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Temp:</span>
                         <div className="flex flex-1 gap-2">
-                          {[
-                            { val: "Hot", label: "Hot 🔥", activeBg: "#FFF7ED", activeBorder: "#EA580C", activeText: "#C2410C" },
-                            { val: "Iced", label: "Iced ❄️", activeBg: "#F0F9FF", activeBorder: "#0284C7", activeText: "#0369A1" },
-                          ].map((m) => {
-                            const isSel = activeItem.notes === m.val;
+                          {["Hot", "Iced"].map((temp) => {
+                            const isSel = activeItem.notes === temp;
                             return (
                               <button
-                                key={m.val}
+                                key={temp}
                                 type="button"
-                                onClick={() => handleSelectModifierChip("notes", m.val)}
-                                className="flex-1 h-9 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center shadow-2xs"
-                                style={{
-                                  background: isSel ? m.activeBg : "#F5F5F4",
-                                  borderColor: isSel ? m.activeBorder : "#E7E5E4",
-                                  color: isSel ? m.activeText : "#78716C",
-                                }}
+                                onClick={() => handleSelectModifierChip("notes", temp)}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                }`}
+                                style={isSel ? { background: "#4A2E1F" } : {}}
                               >
-                                {m.label}
+                                {temp}
                               </button>
                             );
                           })}
                         </div>
                       </div>
 
-                      {/* Row 2: Size */}
+                      {/* Row 2 — Size */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-black text-stone-600 uppercase">Size:</span>
+                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Size:</span>
                         <div className="flex flex-1 gap-2">
                           {[
-                            { val: "S", label: "S ($0)" },
-                            { val: "M", label: "M (+$0.30)" },
-                            { val: "L", label: "L (+$0.60)" },
+                            { val: "Small ($0.00)", label: "Small ($0.00)" },
+                            { val: "Medium (+$0.30)", label: "Medium (+$0.30)" },
+                            { val: "Large (+$0.60)", label: "Large (+$0.60)" },
                           ].map((s) => {
                             const isSel = activeItem.size === s.val;
                             return (
@@ -960,12 +964,10 @@ export default function PosRegisterPage() {
                                 key={s.val}
                                 type="button"
                                 onClick={() => handleSelectModifierChip("size", s.val)}
-                                className="flex-1 h-9 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center shadow-2xs"
-                                style={{
-                                  background: isSel ? "#4A2E1F" : "#F5F5F4",
-                                  borderColor: isSel ? "#4A2E1F" : "#E7E5E4",
-                                  color: isSel ? "#FFFFFF" : "#78716C",
-                                }}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                }`}
+                                style={isSel ? { background: "#4A2E1F" } : {}}
                               >
                                 {s.label}
                               </button>
@@ -974,62 +976,46 @@ export default function PosRegisterPage() {
                         </div>
                       </div>
 
-                      {/* Row 3: Sugar */}
+                      {/* Row 3 — Sugar */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-black text-stone-600 uppercase">Sugar:</span>
+                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Sugar:</span>
                         <div className="flex flex-1 gap-1.5">
-                          {[
-                            { val: "0%", label: "0%" },
-                            { val: "30%", label: "30%" },
-                            { val: "50%", label: "50%" },
-                            { val: "70%", label: "70%" },
-                            { val: "100%", label: "100%" },
-                          ].map((sg) => {
-                            const isSel = activeItem.sweetness === sg.val;
+                          {["0%", "30%", "50%", "70%", "100%"].map((sg) => {
+                            const isSel = activeItem.sweetness === sg;
                             return (
                               <button
-                                key={sg.val}
+                                key={sg}
                                 type="button"
-                                onClick={() => handleSelectModifierChip("sweetness", sg.val)}
-                                className="flex-1 h-9 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center shadow-2xs"
-                                style={{
-                                  background: isSel ? "#FEF3C7" : "#F5F5F4",
-                                  borderColor: isSel ? "#D97706" : "#E7E5E4",
-                                  color: isSel ? "#92400E" : "#78716C",
-                                }}
+                                onClick={() => handleSelectModifierChip("sweetness", sg)}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                }`}
+                                style={isSel ? { background: "#4A2E1F" } : {}}
                               >
-                                {sg.label}
+                                {sg}
                               </button>
                             );
                           })}
                         </div>
                       </div>
 
-                      {/* Row 4: Ice */}
+                      {/* Row 4 — Ice */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-black text-stone-600 uppercase">Ice:</span>
+                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Ice:</span>
                         <div className="flex flex-1 gap-1.5">
-                          {[
-                            { val: "No Ice", label: "No Ice" },
-                            { val: "30%", label: "30%" },
-                            { val: "50%", label: "50%" },
-                            { val: "70%", label: "70%" },
-                            { val: "Full", label: "Full Ice" },
-                          ].map((ic) => {
-                            const isSel = activeItem.ice === ic.val;
+                          {["No Ice", "Less Ice", "Normal Ice", "Extra Ice"].map((ic) => {
+                            const isSel = activeItem.ice === ic;
                             return (
                               <button
-                                key={ic.val}
+                                key={ic}
                                 type="button"
-                                onClick={() => handleSelectModifierChip("ice", ic.val)}
-                                className="flex-1 h-9 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center shadow-2xs"
-                                style={{
-                                  background: isSel ? "#F0F9FF" : "#F5F5F4",
-                                  borderColor: isSel ? "#0284C7" : "#E7E5E4",
-                                  color: isSel ? "#0369A1" : "#78716C",
-                                }}
+                                onClick={() => handleSelectModifierChip("ice", ic)}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                }`}
+                                style={isSel ? { background: "#4A2E1F" } : {}}
                               >
-                                {ic.label}
+                                {ic}
                               </button>
                             );
                           })}
@@ -1037,56 +1023,24 @@ export default function PosRegisterPage() {
                       </div>
                     </div>
                   ) : (
-                    /* Pastries / Food Modifier Rows */
+                    /* Pastry Food Options */
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-black text-stone-600 uppercase">Heat Up:</span>
+                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Warm Up:</span>
                         <div className="flex flex-1 gap-2">
-                          {[
-                            { val: "Warm Up", label: "Warm Up 🔥" },
-                            { val: "Normal Temp", label: "Room Temp 🥐" },
-                          ].map((w) => {
-                            const isSel = activeItem.notes === w.val;
+                          {["Warm Up", "No Warm Up"].map((w) => {
+                            const isSel = activeItem.notes === w;
                             return (
                               <button
-                                key={w.val}
+                                key={w}
                                 type="button"
-                                onClick={() => handleSelectModifierChip("notes", w.val)}
-                                className="flex-1 h-9 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center shadow-2xs"
-                                style={{
-                                  background: isSel ? "#FFF7ED" : "#F5F5F4",
-                                  borderColor: isSel ? "#EA580C" : "#E7E5E4",
-                                  color: isSel ? "#C2410C" : "#78716C",
-                                }}
+                                onClick={() => handleSelectModifierChip("notes", w)}
+                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                }`}
+                                style={isSel ? { background: "#4A2E1F" } : {}}
                               >
-                                {w.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-black text-stone-600 uppercase">Portion:</span>
-                        <div className="flex flex-1 gap-2">
-                          {[
-                            { val: "Whole", label: "Whole Pastry" },
-                            { val: "Cut in Half", label: "Cut in Half 🔪" },
-                          ].map((pt) => {
-                            const isSel = activeItem.portion === pt.val;
-                            return (
-                              <button
-                                key={pt.val}
-                                type="button"
-                                onClick={() => handleSelectModifierChip("portion", pt.val)}
-                                className="flex-1 h-9 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center shadow-2xs"
-                                style={{
-                                  background: isSel ? "#4A2E1F" : "#F5F5F4",
-                                  borderColor: isSel ? "#4A2E1F" : "#E7E5E4",
-                                  color: isSel ? "#FFFFFF" : "#78716C",
-                                }}
-                              >
-                                {pt.label}
+                                {w}
                               </button>
                             );
                           })}
@@ -1099,16 +1053,16 @@ export default function PosRegisterPage() {
             </>
           )}
 
-          {/* Tab 2: Orders / History */}
+          {/* Orders / History Tab */}
           {activeNav === "orders" && (
             <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <div>
                   <h2 className="text-base font-black text-stone-900">Completed Orders History</h2>
-                  <p className="text-xs text-stone-400">Real-time local and synced sales records</p>
+                  <p className="text-xs text-stone-400">Synced cloud and offline sales records</p>
                 </div>
                 <span className="text-xs font-black text-stone-700 bg-stone-100 px-3 py-1 rounded-full">
-                  {completedOrders.length} Completed
+                  {completedOrders.length} Orders
                 </span>
               </div>
 
@@ -1138,13 +1092,13 @@ export default function PosRegisterPage() {
             </div>
           )}
 
-          {/* Tab 3: Tables Seating Map */}
+          {/* Tables Seating Tab */}
           {activeNav === "tables" && (
             <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <div>
-                  <h2 className="text-base font-black text-stone-900">Dine-In Table Seating Map</h2>
-                  <p className="text-xs text-stone-400">Select a table to assign to current active ticket</p>
+                  <h2 className="text-base font-black text-stone-900">Dine-In Table Seating Floor Plan</h2>
+                  <p className="text-xs text-stone-400">Assign table to current ticket</p>
                 </div>
               </div>
 
@@ -1183,7 +1137,7 @@ export default function PosRegisterPage() {
                         {tbl.status}
                       </span>
                     </div>
-                    <p className="text-xs text-stone-500 mt-2">{tbl.guests} Seats Capacity</p>
+                    <p className="text-xs text-stone-500 mt-2">{tbl.guests} Guests</p>
                     {tbl.currentBillUSD && (
                       <p className="text-xs font-black text-amber-900 mt-1">Bill: {formatUSD(tbl.currentBillUSD)}</p>
                     )}
@@ -1193,13 +1147,13 @@ export default function PosRegisterPage() {
             </div>
           )}
 
-          {/* Tab 4: Customers CRM */}
+          {/* Customers Loyalty Tab */}
           {activeNav === "customers" && (
             <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <div>
-                  <h2 className="text-base font-black text-stone-900">Customer CRM &amp; Loyalty Lookup</h2>
-                  <p className="text-xs text-stone-400">Select member to apply rewards and earn points</p>
+                  <h2 className="text-base font-black text-stone-900">Customer Loyalty &amp; CRM</h2>
+                  <p className="text-xs text-stone-400">Select customer profile</p>
                 </div>
               </div>
 
@@ -1209,7 +1163,7 @@ export default function PosRegisterPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-black text-sm text-stone-900">{cust.name}</span>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">{cust.tier} Member</span>
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">{cust.tier}</span>
                       </div>
                       <p className="text-xs text-stone-500 mt-0.5">{cust.phone}</p>
                       <p className="text-xs font-bold text-emerald-700 mt-1">⭐ {cust.points} Points Available</p>
@@ -1221,7 +1175,7 @@ export default function PosRegisterPage() {
                         soundFX.playSuccess();
                         setSelectedCustomer(cust);
                         setActiveNav("register");
-                        showNotification("Customer Attached", `${cust.name} attached to order`, "success");
+                        showNotification("Customer Attached", `${cust.name} attached`, "success");
                       }}
                       className="px-3 py-2 rounded-xl text-white font-black text-xs shadow-xs"
                       style={{ background: "#4A2E1F" }}
@@ -1235,9 +1189,9 @@ export default function PosRegisterPage() {
           )}
         </main>
 
-        {/* ── Right Sidebar (Compact Line-Item Cart Layout) ───────── */}
+        {/* ── Right Sidebar: Tabular Cart & Bold Dual Currency ─────────── */}
         <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white border-l border-stone-200/90 shadow-lg z-30 overflow-hidden">
-          {/* Header & Channel Selector */}
+          {/* Header & Order Channel Selector */}
           <div className="shrink-0 px-4 py-2.5 border-b border-stone-100 space-y-2 bg-stone-50/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1269,8 +1223,9 @@ export default function PosRegisterPage() {
               )}
             </div>
 
+            {/* Order Channel Selector */}
             <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-xl">
-              {(["WALK-IN", "TAKEAWAY", "DELIVERY"] as const).map((ch) => (
+              {(["Walk-in", "Takeaway", "Delivery"] as const).map((ch) => (
                 <button
                   key={ch}
                   type="button"
@@ -1288,13 +1243,22 @@ export default function PosRegisterPage() {
             </div>
           </div>
 
-          {/* ── Compact Table Cart Item List (Clean Line-Item with subtle red dot for missing) ── */}
-          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 min-h-0 divide-y divide-stone-100">
+          {/* ── Crisp Spreadsheet Table Cart Layout ── */}
+          {/* Table Column Headers */}
+          <div className="shrink-0 px-4 py-1.5 bg-stone-100/70 border-b border-stone-200/80 grid grid-cols-12 text-[10px] font-black text-stone-500 uppercase tracking-wider">
+            <span className="col-span-5">Product</span>
+            <span className="col-span-2 text-right">Price</span>
+            <span className="col-span-3 text-center">Qty</span>
+            <span className="col-span-2 text-right">Amount</span>
+          </div>
+
+          {/* Table Rows with Swipe-to-Delete & pb-20 so it never gets cut off */}
+          <div className="flex-1 overflow-y-auto px-2 py-1 min-h-0 pb-16 divide-y divide-stone-100">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center py-12 text-stone-300">
-                <ShoppingCart size={34} className="mb-2 stroke-[1.5]" />
-                <p className="text-xs font-bold text-stone-500">No items in cart</p>
-                <p className="text-[10px] text-stone-400 mt-0.5">Tap menu products to start billing</p>
+                <ShoppingCart size={32} className="mb-2 stroke-[1.5]" />
+                <p className="text-xs font-bold text-stone-500">Cart is empty</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">Tap menu cards to add items</p>
               </div>
             ) : (
               <AnimatePresence initial={false}>
@@ -1304,10 +1268,9 @@ export default function PosRegisterPage() {
                   const isMissing = missing.length > 0;
                   const modifierSummary = [
                     item.notes,
-                    item.size ? `Size ${item.size}` : "",
+                    item.size,
                     item.sweetness ? `${item.sweetness} Sugar` : "",
-                    item.ice ? `${item.ice} Ice` : "",
-                    item.portion,
+                    item.ice ? `${item.ice}` : "",
                   ]
                     .filter(Boolean)
                     .join(" · ");
@@ -1332,48 +1295,50 @@ export default function PosRegisterPage() {
                         soundFX.playBlip(950);
                         setActiveCartId(item.cartId);
                       }}
-                      className={`relative py-2 px-2.5 rounded-xl select-none transition-all cursor-pointer ${
-                        isSelected ? "bg-amber-50/70 border border-amber-900/20" : "hover:bg-stone-50"
+                      className={`relative py-2 px-2 rounded-xl transition-all cursor-pointer ${
+                        isSelected ? "bg-amber-50/80 border border-amber-900/20" : "hover:bg-stone-50"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        {/* Title & Modifier Tag */}
-                        <div className="flex-1 min-w-0">
+                      {/* Swipe-to-delete red background action */}
+                      <div className="absolute inset-y-0 right-0 w-24 bg-rose-600 rounded-xl flex items-center justify-center text-white text-xs font-black">
+                        <Trash2 size={15} />
+                      </div>
+
+                      {/* Line Item Spreadsheet Columns */}
+                      <div className="relative z-10 grid grid-cols-12 items-center gap-1">
+                        {/* 1. Product Name + Missing indicator */}
+                        <div className="col-span-5 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            {/* Subtle Red Dot Indicator if modifiers are missing */}
                             {isMissing && (
                               <span
                                 className="h-2 w-2 rounded-full bg-rose-500 shrink-0 inline-block animate-pulse"
                                 title={`Missing: ${missing.join(", ")}`}
                               />
                             )}
-                            <p className="text-xs font-black text-stone-900 truncate leading-tight">{item.name}</p>
-                            <span className="text-xs font-black text-stone-900 ml-auto mr-2">
-                              {formatUSD(item.price * item.qty)}
+                            <span className="text-xs font-black text-stone-900 truncate leading-tight block">
+                              {item.name}
                             </span>
                           </div>
-
-                          {/* Small Muted Tags */}
-                          <div className="mt-0.5 flex items-center gap-1">
-                            {modifierSummary ? (
-                              <p className="text-[11px] text-stone-500 truncate">{modifierSummary}</p>
-                            ) : isMissing ? (
-                              <p className="text-[11px] text-rose-500 font-bold truncate">Select {missing.join(", ")}</p>
-                            ) : (
-                              <p className="text-[11px] text-stone-400">Regular</p>
-                            )}
-                          </div>
+                          {/* Indented Muted Modifiers */}
+                          <span className="text-[10px] text-stone-400 font-medium truncate block mt-0.5">
+                            {modifierSummary || (isMissing ? "⚠️ Modifiers required" : "Regular")}
+                          </span>
                         </div>
 
-                        {/* Quantity Stepper */}
-                        <div className="flex items-center gap-1 shrink-0 bg-stone-100 rounded-lg p-0.5" onClick={(e) => e.stopPropagation()}>
+                        {/* 2. Unit Price */}
+                        <div className="col-span-2 text-right text-xs font-semibold text-stone-600">
+                          {formatUSD(item.price)}
+                        </div>
+
+                        {/* 3. Quantity Stepper */}
+                        <div className="col-span-3 flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={() => {
                               soundFX.playBlip(750);
                               dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: item.qty - 1 });
                             }}
-                            className="h-5 w-5 rounded bg-white text-stone-700 font-black text-xs flex items-center justify-center hover:bg-stone-200 transition-colors"
+                            className="h-5 w-5 rounded bg-stone-100 text-stone-700 font-black text-xs flex items-center justify-center hover:bg-stone-200"
                           >
                             −
                           </button>
@@ -1384,10 +1349,15 @@ export default function PosRegisterPage() {
                               soundFX.playBlip(880);
                               dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: item.qty + 1 });
                             }}
-                            className="h-5 w-5 rounded bg-white text-stone-700 font-black text-xs flex items-center justify-center hover:bg-stone-200 transition-colors"
+                            className="h-5 w-5 rounded bg-stone-100 text-stone-700 font-black text-xs flex items-center justify-center hover:bg-stone-200"
                           >
                             +
                           </button>
+                        </div>
+
+                        {/* 4. Line Amount */}
+                        <div className="col-span-2 text-right text-xs font-black text-stone-900">
+                          {formatUSD(item.price * item.qty)}
                         </div>
                       </div>
                     </motion.div>
@@ -1397,10 +1367,10 @@ export default function PosRegisterPage() {
             )}
           </div>
 
-          {/* ── Bold Dual Currency Totals (USD $7.97 | 32,700 ៛) ── */}
-          <div className="shrink-0 px-4 py-2.5 border-t border-stone-200/80 bg-stone-50/90 space-y-1">
+          {/* ── Totals & Bold Dual Currency (USD $7.97 | KHR 32,700 ៛) ── */}
+          <div className="shrink-0 px-4 py-2 border-t border-stone-200/80 bg-stone-50/90 space-y-1">
             <div className="flex justify-between text-[11px] text-stone-500 font-medium">
-              <span>Subtotal (Tax 10% Included)</span>
+              <span>Subtotal (Tax Included 10%)</span>
               <span>{formatUSD(rawSubtotal)}</span>
             </div>
             {discountUSD > 0 && (
@@ -1410,14 +1380,13 @@ export default function PosRegisterPage() {
               </div>
             )}
 
-            {/* Prominent Bold Dual Currency Display */}
             <div className="flex items-center justify-between border-t border-dashed border-stone-300 pt-1.5">
               <span className="text-xs font-black text-stone-800 uppercase tracking-wider">Total Due:</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-lg font-black text-stone-950 leading-none">{formatUSD(totalUSD)}</span>
+                <span className="text-lg font-black text-stone-950 leading-none">USD {formatUSD(totalUSD)}</span>
                 <span className="text-stone-300 text-base font-light">|</span>
                 <span className="text-sm font-black text-amber-900 leading-none bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200">
-                  {formatKHRDirect(totalKHR)}
+                  KHR {formatKHRDirect(totalKHR)}
                 </span>
               </div>
             </div>
@@ -1513,6 +1482,7 @@ export default function PosRegisterPage() {
                 <span>VOID</span>
               </button>
 
+              {/* HOLD ORDER BUTTON - OPENS HELD DRAWER */}
               <button
                 type="button"
                 onClick={() => {
@@ -1534,7 +1504,7 @@ export default function PosRegisterPage() {
         </aside>
       </div>
 
-      {/* ── Fixed Bottom Navigation Bar (No Overlap with Modifier Panel) ── */}
+      {/* ── Fixed Bottom Navigation Bar (iPad Ergonomic Layout) ───────── */}
       <nav className="h-14 shrink-0 bg-white/95 backdrop-blur-md border-t border-stone-200 flex items-center justify-around px-4 sm:px-8 z-40 select-none">
         <button
           type="button"
@@ -1547,7 +1517,7 @@ export default function PosRegisterPage() {
           }`}
         >
           <Store size={18} className={activeNav === "register" ? "stroke-[2.5]" : "stroke-[1.8]"} />
-          <span className="text-[10px] tracking-tight mt-0.5">Register</span>
+          <span className="text-[10px] tracking-tight mt-0.5">Sales</span>
           {activeNav === "register" && (
             <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
           )}
@@ -1654,7 +1624,7 @@ export default function PosRegisterPage() {
                 </div>
                 <div>
                   <h2 className="text-base font-black text-stone-900">Cash Calculator</h2>
-                  <p className="text-xs text-stone-400">Rate: $1 = 4,100 KHR · 100៛ Rounding Rule</p>
+                  <p className="text-xs text-stone-400">Standard Rate: $1 = 4,100 KHR · 100៛ Rounding Rule</p>
                 </div>
               </div>
               <button
@@ -1782,7 +1752,7 @@ export default function PosRegisterPage() {
               )}
             </div>
 
-            {/* Dedicated Touch Numpad */}
+            {/* Numpad */}
             <div className="grid grid-cols-3 gap-1.5 pt-1">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                 <button
@@ -1902,7 +1872,7 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 3. Quantity Numpad Modal */}
+      {/* 3. Quantity Modal */}
       {showQtyModal && activeItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
@@ -1958,7 +1928,7 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 4. Promotions Modal */}
+      {/* 4. Promo Modal */}
       {showPromoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
@@ -2009,12 +1979,12 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 5. Held Orders Modal */}
+      {/* ── 5. HELD ORDERS DRAWER / MODAL (Slide-over view) ── */}
       {showHeldOrdersModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-              <span className="text-xs font-black text-stone-900">Held Orders Queue ({heldOrders.length})</span>
+              <span className="text-xs font-black text-stone-900">Held Orders Drawer ({heldOrders.length})</span>
               <button type="button" onClick={() => setShowHeldOrdersModal(false)} className="text-stone-400 text-xs font-bold">
                 ✕
               </button>
@@ -2285,7 +2255,7 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* Mandatory Modifier Validation Toast */}
+      {/* Mandatory Modifier Toast */}
       {validationToast && (
         <div className="fixed top-15 right-5 z-[80] flex items-start gap-3 rounded-2xl bg-rose-600 px-4 py-3 text-white shadow-2xl border border-rose-400 animate-in slide-in-from-top-3 duration-200 max-w-sm">
           <AlertCircle size={20} className="shrink-0 mt-0.5" />
@@ -2306,7 +2276,7 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* General Notification Toast */}
+      {/* General Toast */}
       {generalToast && (
         <div
           className={`fixed bottom-16 right-5 z-[80] flex items-center gap-2.5 rounded-2xl px-4 py-3 text-white shadow-xl animate-in slide-in-from-bottom-2 duration-200 ${
