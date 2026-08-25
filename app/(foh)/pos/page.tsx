@@ -1282,30 +1282,39 @@ export default function PosRegisterPage() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -80 }}
-                      drag="x"
-                      dragConstraints={{ left: -90, right: 0 }}
-                      dragElastic={0.05}
-                      onDragEnd={(_e, info) => {
-                        if (info.offset.x < -60) {
-                          soundFX.playBlip(600);
-                          dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
-                        }
-                      }}
-                      onClick={() => {
-                        soundFX.playBlip(950);
-                        setActiveCartId(item.cartId);
-                      }}
-                      className={`relative py-2 px-2 rounded-xl transition-all cursor-pointer ${
-                        isSelected ? "bg-amber-50/80 border border-amber-900/20" : "hover:bg-stone-50"
-                      }`}
+                      className="relative overflow-hidden rounded-xl bg-rose-600 my-0.5"
                     >
                       {/* Swipe-to-delete red background action */}
-                      <div className="absolute inset-y-0 right-0 w-24 bg-rose-600 rounded-xl flex items-center justify-center text-white text-xs font-black">
-                        <Trash2 size={15} />
+                      <div
+                        className="absolute inset-y-0 right-0 w-20 flex items-center justify-center text-white text-xs font-black cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          soundFX.playBlip(600);
+                          dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
+                        }}
+                      >
+                        <Trash2 size={16} />
                       </div>
 
-                      {/* Line Item Spreadsheet Columns */}
-                      <div className="relative z-10 grid grid-cols-12 items-center gap-1">
+                      {/* Foreground draggable row */}
+                      <motion.div
+                        drag="x"
+                        dragConstraints={{ left: -75, right: 0 }}
+                        dragElastic={0.05}
+                        onDragEnd={(_e, info) => {
+                          if (info.offset.x < -50) {
+                            soundFX.playBlip(600);
+                            dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
+                          }
+                        }}
+                        onClick={() => {
+                          soundFX.playBlip(950);
+                          setActiveCartId(item.cartId);
+                        }}
+                        className={`relative z-10 py-2 px-2.5 transition-all cursor-pointer ${
+                          isSelected ? "bg-amber-50 border border-amber-900/20" : "bg-white hover:bg-stone-50"
+                        }`}
+                      >
                         {/* 1. Product Name + Missing indicator */}
                         <div className="col-span-5 min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -1359,7 +1368,7 @@ export default function PosRegisterPage() {
                         <div className="col-span-2 text-right text-xs font-black text-stone-900">
                           {formatUSD(item.price * item.qty)}
                         </div>
-                      </div>
+                      </motion.div>
                     </motion.div>
                   );
                 })}

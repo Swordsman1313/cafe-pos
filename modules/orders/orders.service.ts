@@ -211,18 +211,26 @@ export class OrdersService {
     db.orders.push(order);
 
     // 5. Create Payment Transaction
+    const resolvedMethod =
+      input.payment?.method ||
+      ((input as any).paymentMethod === "PAYMENT" || (input as any).paymentMethod === "BAKONG KHQR"
+        ? "DYNAMIC_QR"
+        : (input as any).paymentMethod === "CREDIT CARD"
+        ? "CREDIT_CARD"
+        : "CASH_USD");
+
     const payment = {
       id: `pay-${Date.now()}`,
       orderId: order.id,
       storeId,
       shiftId: activeShift?.id || null,
-      method: input.payment.method,
-      amountUSD: input.payment.amountUSD,
-      amountKHR: input.payment.amountKHR || Math.round(input.payment.amountUSD * store.khrRate),
-      changeGivenUSD: input.payment.changeGivenUSD || 0,
-      changeGivenKHR: input.payment.changeGivenKHR || 0,
-      transactionRef: input.payment.transactionRef || `TX-${Date.now()}`,
-      isConfirmed: true,
+      method: resolvedMethod,
+      amountUSD: input.payment?.amountUSD ?? total,
+      amountKHR: input.payment?.amountKHR || 0,
+      changeGivenUSD: input.payment?.changeGivenUSD || 0,
+      changeGivenKHR: input.payment?.changeGivenKHR || 0,
+      transactionRef: input.payment?.transactionRef || null,
+      status: "COMPLETED",
       createdAt: new Date(),
     };
 
