@@ -35,6 +35,7 @@ import {
   Grid3X3,
   UserCheck,
   DollarSign,
+  Sparkles,
 } from "lucide-react";
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
@@ -399,7 +400,7 @@ export default function PosRegisterPage() {
   const [discountUSD, setDiscountUSD] = useState<number>(0);
 
   // Search & Category
-  const [query, setQuery] = useState<string>("");
+  const [query, setQuery] = useState<string>("" );
   const [category, setCategory] = useState<string>("all");
   const categoryScrollRef = useRef<HTMLDivElement>(null);
 
@@ -554,13 +555,11 @@ export default function PosRegisterPage() {
 
   const handleProductCardClick = (product: ProductItem) => {
     soundFX.playBlip(880);
-    // Check if the currently active item matches this product
     if (activeItem && activeItem.productId === product.id) {
       dispatch({ type: "INCREMENT_QTY", cartId: activeItem.cartId });
     } else {
-      // Add as new line item and focus it
       dispatch({ type: "ADD_PRODUCT", product });
-      setActiveCartId(null); // will automatically point to latest item
+      setActiveCartId(null);
     }
   };
 
@@ -721,19 +720,19 @@ export default function PosRegisterPage() {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden font-sans antialiased select-none" style={{ background: "#FDFBF9" }}>
       {/* ── Top Bar: Real-Time Clock & Shift Tracker ── */}
-      <header className="shrink-0 h-13 px-6 border-b border-stone-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between z-30">
-        <div className="flex items-center gap-4">
+      <header className="shrink-0 h-12 px-5 border-b border-stone-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between z-30">
+        <div className="flex items-center gap-3">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-white font-black text-sm shadow-sm"
+            className="flex h-7.5 w-7.5 items-center justify-center rounded-xl text-white font-black text-xs shadow-sm"
             style={{ background: "#4A2E1F" }}
           >
             K
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-sm font-black text-stone-900 tracking-tight">Artisan Roast</h1>
-            <div className="h-4 w-px bg-stone-200" />
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-lg border border-stone-200">
-              <Clock size={12} className="text-stone-500" />
+            <h1 className="text-xs font-black text-stone-900 tracking-tight">Artisan Roast</h1>
+            <div className="h-3.5 w-px bg-stone-200" />
+            <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
+              <Clock size={11} className="text-stone-500" />
               <span>{currentTime || "00:00:00 AM"}</span>
             </div>
           </div>
@@ -747,7 +746,7 @@ export default function PosRegisterPage() {
               <span>Shift #{shift.shiftNumber} ({shiftAlertInfo.shiftDateLabel} - Unclosed ⚠️)</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold">
+            <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-bold">
               <span>Shift #{shift.shiftNumber} · Opened {shiftAlertInfo?.shiftDateLabel} ({shiftAlertInfo?.shiftTime})</span>
             </div>
           )}
@@ -767,7 +766,7 @@ export default function PosRegisterPage() {
         {/* Right: Online Indicator & Operations */}
         <div className="flex items-center gap-2">
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black border ${
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
               isOnline ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-amber-50 text-amber-900 border-amber-300 animate-pulse"
             }`}
           >
@@ -793,14 +792,14 @@ export default function PosRegisterPage() {
           {activeNav === "register" && (
             <>
               {/* Category Pills & Quick Search */}
-              <div className="shrink-0 px-5 pt-2.5 pb-2 border-b border-stone-200/60 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-4">
+              <div className="shrink-0 px-5 pt-2 pb-1.5 border-b border-stone-200/60 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-4">
                 <div className="flex items-center gap-1 flex-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => scrollCategories("left")}
-                    className="h-8 w-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                    className="h-7.5 w-7.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                   >
-                    <ChevronLeft size={14} />
+                    <ChevronLeft size={13} />
                   </button>
 
                   <div ref={categoryScrollRef} className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
@@ -815,14 +814,14 @@ export default function PosRegisterPage() {
                             soundFX.playBlip(900);
                             setCategory(cat.id);
                           }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-all border shrink-0 cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-black text-xs transition-all border shrink-0 cursor-pointer ${
                             isActive
-                              ? "text-white shadow-sm border-transparent"
+                              ? "text-white shadow-xs border-transparent"
                               : "bg-white text-stone-600 border-stone-200/80 hover:border-stone-400 hover:bg-stone-50"
                           }`}
                           style={isActive ? { background: "#4A2E1F" } : {}}
                         >
-                          <Icon size={13} />
+                          <Icon size={12} />
                           <span>{cat.label}</span>
                         </button>
                       );
@@ -832,25 +831,25 @@ export default function PosRegisterPage() {
                   <button
                     type="button"
                     onClick={() => scrollCategories("right")}
-                    className="h-8 w-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                    className="h-7.5 w-7.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                   >
-                    <ChevronRight size={14} />
+                    <ChevronRight size={13} />
                   </button>
                 </div>
 
                 <div className="relative w-44 shrink-0">
-                  <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search menu..."
-                    className="h-8 w-full rounded-xl bg-stone-100/90 pl-8 pr-6 text-xs font-medium text-stone-800 outline-none transition-all placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-stone-800"
+                    className="h-7.5 w-full rounded-xl bg-stone-100/90 pl-8 pr-6 text-xs font-medium text-stone-800 outline-none transition-all placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-stone-800"
                   />
                   {query && (
                     <button
                       type="button"
                       onClick={() => setQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-[10px]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-[9px]"
                     >
                       ✕
                     </button>
@@ -858,20 +857,26 @@ export default function PosRegisterPage() {
                 </div>
               </div>
 
-              {/* ── High-Density Product Grid: Compact Horizontal Tiles (12-20 per screen) ── */}
-              <div className="flex-1 overflow-y-auto px-5 py-2.5 min-h-0">
+              {/* ── High-Density Product Grid: Compact Horizontal Tiles ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-2 min-h-0">
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                   {filteredProducts.map((product) => {
                     const ProductIcon = CATEGORY_ICON[product.category] || Coffee;
+                    const isCardActive = activeItem?.productId === product.id;
+
                     return (
                       <div
                         key={product.id}
                         onClick={() => handleProductCardClick(product)}
-                        className="group bg-white rounded-2xl border border-stone-200/90 p-2 flex items-center gap-2.5 hover:border-stone-400 hover:shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                        className={`group rounded-2xl border p-2 flex items-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer shadow-2xs ${
+                          isCardActive
+                            ? "bg-amber-50/70 border-[#4A2E1F] ring-1 ring-[#4A2E1F]"
+                            : "bg-white border-stone-200/90 hover:border-stone-400 hover:shadow-xs"
+                        }`}
                       >
                         {/* Square Thumbnail on Left */}
                         <div
-                          className="h-12 w-12 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+                          className="h-11 w-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
                           style={{
                             background:
                               product.category === "espresso"
@@ -883,7 +888,7 @@ export default function PosRegisterPage() {
                                 : "linear-gradient(135deg, #C28B5E, #8C5933)",
                           }}
                         >
-                          <ProductIcon size={20} />
+                          <ProductIcon size={18} />
                         </div>
 
                         {/* Title & Dual Price on Right */}
@@ -904,32 +909,32 @@ export default function PosRegisterPage() {
                 </div>
               </div>
 
-              {/* ── Dynamic, Stacked Modifier Panel (1 Dedicated Row Per Category) ── */}
+              {/* ── Compact Multi-Row Modifier Panel (Sleek & Ergonomic) ── */}
               {activeItem && (activeIsBeverage || activeIsPastry) && (
-                <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-6 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
+                <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-5 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
                   {/* Context Header */}
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">Condiments for:</span>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black text-white shadow-xs" style={{ background: "#4A2E1F" }}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Condiments:</span>
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-black text-white shadow-2xs" style={{ background: "#4A2E1F" }}>
                         {activeItem.name} ({formatUSD(activeItem.price)})
                       </span>
                       {getMissingModifiers(activeItem).length > 0 && (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          ⚠️ Select: {getMissingModifiers(activeItem).join(", ")}
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          ⚠️ Required: {getMissingModifiers(activeItem).join(", ")}
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-stone-400 font-semibold">1 Row Per Group · Equal Width Buttons</span>
+                    <span className="text-[10px] text-stone-400 font-medium">1 Row Per Group</span>
                   </div>
 
                   {/* Multi-Row Vertical Stack */}
                   {activeIsBeverage ? (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                       {/* Row 1 — Temp */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Temp:</span>
-                        <div className="flex flex-1 gap-2">
+                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Temp:</span>
+                        <div className="flex flex-1 gap-1.5">
                           {["Hot", "Iced"].map((temp) => {
                             const isSel = activeItem.notes === temp;
                             return (
@@ -937,8 +942,8 @@ export default function PosRegisterPage() {
                                 key={temp}
                                 type="button"
                                 onClick={() => handleSelectModifierChip("notes", temp)}
-                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                                 }`}
                                 style={isSel ? { background: "#4A2E1F" } : {}}
                               >
@@ -951,8 +956,8 @@ export default function PosRegisterPage() {
 
                       {/* Row 2 — Size */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Size:</span>
-                        <div className="flex flex-1 gap-2">
+                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Size:</span>
+                        <div className="flex flex-1 gap-1.5">
                           {[
                             { val: "Small ($0.00)", label: "Small ($0.00)" },
                             { val: "Medium (+$0.30)", label: "Medium (+$0.30)" },
@@ -964,8 +969,8 @@ export default function PosRegisterPage() {
                                 key={s.val}
                                 type="button"
                                 onClick={() => handleSelectModifierChip("size", s.val)}
-                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                                 }`}
                                 style={isSel ? { background: "#4A2E1F" } : {}}
                               >
@@ -978,8 +983,8 @@ export default function PosRegisterPage() {
 
                       {/* Row 3 — Sugar */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Sugar:</span>
-                        <div className="flex flex-1 gap-1.5">
+                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Sugar:</span>
+                        <div className="flex flex-1 gap-1">
                           {["0%", "30%", "50%", "70%", "100%"].map((sg) => {
                             const isSel = activeItem.sweetness === sg;
                             return (
@@ -987,8 +992,8 @@ export default function PosRegisterPage() {
                                 key={sg}
                                 type="button"
                                 onClick={() => handleSelectModifierChip("sweetness", sg)}
-                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                                 }`}
                                 style={isSel ? { background: "#4A2E1F" } : {}}
                               >
@@ -1001,8 +1006,8 @@ export default function PosRegisterPage() {
 
                       {/* Row 4 — Ice */}
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Ice:</span>
-                        <div className="flex flex-1 gap-1.5">
+                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Ice:</span>
+                        <div className="flex flex-1 gap-1">
                           {["No Ice", "Less Ice", "Normal Ice", "Extra Ice"].map((ic) => {
                             const isSel = activeItem.ice === ic;
                             return (
@@ -1010,8 +1015,8 @@ export default function PosRegisterPage() {
                                 key={ic}
                                 type="button"
                                 onClick={() => handleSelectModifierChip("ice", ic)}
-                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                                 }`}
                                 style={isSel ? { background: "#4A2E1F" } : {}}
                               >
@@ -1024,10 +1029,10 @@ export default function PosRegisterPage() {
                     </div>
                   ) : (
                     /* Pastry Food Options */
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs font-bold text-stone-600 uppercase">Warm Up:</span>
-                        <div className="flex flex-1 gap-2">
+                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Warm Up:</span>
+                        <div className="flex flex-1 gap-1.5">
                           {["Warm Up", "No Warm Up"].map((w) => {
                             const isSel = activeItem.notes === w;
                             return (
@@ -1035,8 +1040,8 @@ export default function PosRegisterPage() {
                                 key={w}
                                 type="button"
                                 onClick={() => handleSelectModifierChip("notes", w)}
-                                className={`flex-1 h-10 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-sm border-transparent" : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                                 }`}
                                 style={isSel ? { background: "#4A2E1F" } : {}}
                               >
@@ -1189,13 +1194,13 @@ export default function PosRegisterPage() {
           )}
         </main>
 
-        {/* ── Right Sidebar: Tabular Cart & Bold Dual Currency ─────────── */}
+        {/* ── Right Sidebar: High-Precision Tabular Cart & Dual Currency ─────────── */}
         <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white border-l border-stone-200/90 shadow-lg z-30 overflow-hidden">
           {/* Header & Order Channel Selector */}
-          <div className="shrink-0 px-4 py-2.5 border-b border-stone-100 space-y-2 bg-stone-50/40">
+          <div className="shrink-0 px-4 py-2 border-b border-stone-100 space-y-1.5 bg-stone-50/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-stone-900">Ticket #{ticketNumber}</span>
+                <span className="text-xs font-black text-stone-900">Ticket #{ticketNumber}</span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                     validateCartForCheckout(cart).valid && cart.length > 0
@@ -1216,7 +1221,7 @@ export default function PosRegisterPage() {
                     soundFX.playBlip(600);
                     dispatch({ type: "CLEAR" });
                   }}
-                  className="text-[11px] font-bold text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
+                  className="text-[10px] font-bold text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
                 >
                   Clear All
                 </button>
@@ -1224,7 +1229,7 @@ export default function PosRegisterPage() {
             </div>
 
             {/* Order Channel Selector */}
-            <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-xl">
+            <div className="grid grid-cols-3 gap-1 bg-stone-100 p-0.5 rounded-xl">
               {(["Walk-in", "Takeaway", "Delivery"] as const).map((ch) => (
                 <button
                   key={ch}
@@ -1243,17 +1248,16 @@ export default function PosRegisterPage() {
             </div>
           </div>
 
-          {/* ── Crisp Spreadsheet Table Cart Layout ── */}
-          {/* Table Column Headers */}
-          <div className="shrink-0 px-4 py-1.5 bg-stone-100/70 border-b border-stone-200/80 grid grid-cols-12 text-[10px] font-black text-stone-500 uppercase tracking-wider">
-            <span className="col-span-5">Product</span>
-            <span className="col-span-2 text-right">Price</span>
-            <span className="col-span-3 text-center">Qty</span>
-            <span className="col-span-2 text-right">Amount</span>
+          {/* ── Table Column Headers (Strict Pixel Alignment) ── */}
+          <div className="shrink-0 px-3 py-1 bg-stone-100/80 border-b border-stone-200/80 flex items-center justify-between text-[10px] font-black text-stone-500 uppercase tracking-wider">
+            <span className="flex-1 min-w-0 pr-2">Product</span>
+            <span className="w-12 text-right">Price</span>
+            <span className="w-20 text-center">Qty</span>
+            <span className="w-14 text-right">Amount</span>
           </div>
 
-          {/* Table Rows with Swipe-to-Delete & pb-20 so it never gets cut off */}
-          <div className="flex-1 overflow-y-auto px-2 py-1 min-h-0 pb-16 divide-y divide-stone-100">
+          {/* ── Table Rows with Precision Alignment & Swipe-to-Delete ── */}
+          <div className="flex-1 overflow-y-auto px-2 py-1 min-h-0 pb-16 space-y-1">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center py-12 text-stone-300">
                 <ShoppingCart size={32} className="mb-2 stroke-[1.5]" />
@@ -1282,7 +1286,7 @@ export default function PosRegisterPage() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -80 }}
-                      className="relative overflow-hidden rounded-xl bg-rose-600 my-0.5"
+                      className="relative overflow-hidden rounded-xl bg-rose-600 shadow-2xs"
                     >
                       {/* Swipe-to-delete red background action */}
                       <div
@@ -1311,12 +1315,14 @@ export default function PosRegisterPage() {
                           soundFX.playBlip(950);
                           setActiveCartId(item.cartId);
                         }}
-                        className={`relative z-10 py-2 px-2.5 transition-all cursor-pointer ${
-                          isSelected ? "bg-amber-50 border border-amber-900/20" : "bg-white hover:bg-stone-50"
+                        className={`relative z-10 py-2 px-2.5 transition-all cursor-pointer flex items-center justify-between border ${
+                          isSelected
+                            ? "bg-amber-50/90 border-[#4A2E1F]/40"
+                            : "bg-white border-stone-200/80 hover:bg-stone-50"
                         }`}
                       >
-                        {/* 1. Product Name + Missing indicator */}
-                        <div className="col-span-5 min-w-0">
+                        {/* 1. Product Name & Modifiers */}
+                        <div className="flex-1 min-w-0 pr-2">
                           <div className="flex items-center gap-1.5">
                             {isMissing && (
                               <span
@@ -1329,18 +1335,18 @@ export default function PosRegisterPage() {
                             </span>
                           </div>
                           {/* Indented Muted Modifiers */}
-                          <span className="text-[10px] text-stone-400 font-medium truncate block mt-0.5">
+                          <span className="text-[10px] text-stone-500 font-medium truncate block mt-0.5">
                             {modifierSummary || (isMissing ? "⚠️ Modifiers required" : "Regular")}
                           </span>
                         </div>
 
                         {/* 2. Unit Price */}
-                        <div className="col-span-2 text-right text-xs font-semibold text-stone-600">
+                        <div className="w-12 text-right text-[11px] font-semibold text-stone-500 shrink-0">
                           {formatUSD(item.price)}
                         </div>
 
                         {/* 3. Quantity Stepper */}
-                        <div className="col-span-3 flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="w-20 flex items-center justify-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={() => {
@@ -1365,7 +1371,7 @@ export default function PosRegisterPage() {
                         </div>
 
                         {/* 4. Line Amount */}
-                        <div className="col-span-2 text-right text-xs font-black text-stone-900">
+                        <div className="w-14 text-right text-xs font-black text-stone-900 shrink-0">
                           {formatUSD(item.price * item.qty)}
                         </div>
                       </motion.div>
@@ -1376,7 +1382,7 @@ export default function PosRegisterPage() {
             )}
           </div>
 
-          {/* ── Totals & Bold Dual Currency (USD $7.97 | KHR 32,700 ៛) ── */}
+          {/* ── Totals & Bold Dual Currency (USD $X.XX | KHR X,XXX ៛) ── */}
           <div className="shrink-0 px-4 py-2 border-t border-stone-200/80 bg-stone-50/90 space-y-1">
             <div className="flex justify-between text-[11px] text-stone-500 font-medium">
               <span>Subtotal (Tax Included 10%)</span>
@@ -1392,9 +1398,9 @@ export default function PosRegisterPage() {
             <div className="flex items-center justify-between border-t border-dashed border-stone-300 pt-1.5">
               <span className="text-xs font-black text-stone-800 uppercase tracking-wider">Total Due:</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-lg font-black text-stone-950 leading-none">USD {formatUSD(totalUSD)}</span>
-                <span className="text-stone-300 text-base font-light">|</span>
-                <span className="text-sm font-black text-amber-900 leading-none bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200">
+                <span className="text-base font-black text-stone-950 leading-none">USD {formatUSD(totalUSD)}</span>
+                <span className="text-stone-300 text-sm font-light">|</span>
+                <span className="text-xs font-black text-amber-900 leading-none bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200">
                   KHR {formatKHRDirect(totalKHR)}
                 </span>
               </div>
@@ -1514,18 +1520,18 @@ export default function PosRegisterPage() {
       </div>
 
       {/* ── Fixed Bottom Navigation Bar (iPad Ergonomic Layout) ───────── */}
-      <nav className="h-14 shrink-0 bg-white/95 backdrop-blur-md border-t border-stone-200 flex items-center justify-around px-4 sm:px-8 z-40 select-none">
+      <nav className="h-13 shrink-0 bg-white/95 backdrop-blur-md border-t border-stone-200 flex items-center justify-around px-4 sm:px-8 z-40 select-none">
         <button
           type="button"
           onClick={() => {
             soundFX.playBlip(880);
             setActiveNav("register");
           }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-11 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
             activeNav === "register" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
           }`}
         >
-          <Store size={18} className={activeNav === "register" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <Store size={17} className={activeNav === "register" ? "stroke-[2.5]" : "stroke-[1.8]"} />
           <span className="text-[10px] tracking-tight mt-0.5">Sales</span>
           {activeNav === "register" && (
             <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
@@ -1538,12 +1544,12 @@ export default function PosRegisterPage() {
             soundFX.playBlip(880);
             setActiveNav("orders");
           }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-11 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
             activeNav === "orders" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
           }`}
         >
           <div className="relative">
-            <ClipboardList size={18} className={activeNav === "orders" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+            <ClipboardList size={17} className={activeNav === "orders" ? "stroke-[2.5]" : "stroke-[1.8]"} />
             {heldOrders.length > 0 && (
               <span className="absolute -top-1.5 -right-2.5 h-3.5 min-w-[14px] px-1 rounded-full bg-amber-600 text-white text-[8px] font-black flex items-center justify-center">
                 {heldOrders.length}
@@ -1562,11 +1568,11 @@ export default function PosRegisterPage() {
             soundFX.playBlip(880);
             setActiveNav("tables");
           }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-11 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
             activeNav === "tables" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
           }`}
         >
-          <Grid3X3 size={18} className={activeNav === "tables" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <Grid3X3 size={17} className={activeNav === "tables" ? "stroke-[2.5]" : "stroke-[1.8]"} />
           <span className="text-[10px] tracking-tight mt-0.5">Tables</span>
           {activeNav === "tables" && (
             <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
@@ -1579,11 +1585,11 @@ export default function PosRegisterPage() {
             soundFX.playBlip(880);
             setActiveNav("customers");
           }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-11 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
             activeNav === "customers" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
           }`}
         >
-          <Users size={18} className={activeNav === "customers" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <Users size={17} className={activeNav === "customers" ? "stroke-[2.5]" : "stroke-[1.8]"} />
           <span className="text-[10px] tracking-tight mt-0.5">Customers</span>
           {activeNav === "customers" && (
             <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
@@ -1596,9 +1602,9 @@ export default function PosRegisterPage() {
             soundFX.playBlip(800);
             setShowOperationsModal(true);
           }}
-          className="flex min-w-[56px] sm:min-w-[64px] h-11 flex-col items-center justify-center rounded-xl text-stone-400 hover:text-stone-700 transition-all cursor-pointer px-2 py-0.5"
+          className="flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl text-stone-400 hover:text-stone-700 transition-all cursor-pointer px-2 py-0.5"
         >
-          <Settings size={18} className="stroke-[1.8]" />
+          <Settings size={17} className="stroke-[1.8]" />
           <span className="text-[10px] tracking-tight mt-0.5">Operations</span>
         </button>
 
@@ -1608,9 +1614,9 @@ export default function PosRegisterPage() {
             soundFX.playBlip(800);
             setShowCashierModal(true);
           }}
-          className="flex min-w-[64px] sm:min-w-[72px] h-11 items-center justify-center gap-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 transition-all cursor-pointer px-2 py-0.5"
+          className="flex min-w-[64px] sm:min-w-[72px] h-10 items-center justify-center gap-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 transition-all cursor-pointer px-2 py-0.5"
         >
-          <div className={`h-6 w-6 rounded-full ${currentStaff.avatarBg} text-white flex items-center justify-center text-[9px] font-black`}>
+          <div className={`h-5.5 w-5.5 rounded-full ${currentStaff.avatarBg} text-white flex items-center justify-center text-[9px] font-black`}>
             {currentStaff.avatarText}
           </div>
           <div className="text-left">
@@ -1988,7 +1994,7 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* ── 5. HELD ORDERS DRAWER / MODAL (Slide-over view) ── */}
+      {/* 5. Held Orders Drawer Modal */}
       {showHeldOrdersModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
