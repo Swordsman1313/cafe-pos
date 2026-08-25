@@ -1,0 +1,484 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  CASHIER
+  BARISTA
+}
+
+enum OrderChannel {
+  WALK_IN
+  TAKEAWAY
+  DELIVERY
+  DINE_IN
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH_USD
+  CASH_KHR
+  DYNAMIC_QR
+  CREDIT_CARD
+}
+
+enum UnitOfMeasure {
+  GRAM
+  ML
+  UNIT
+  PIECE
+}
+
+enum StockTransactionType {
+  RESTOCK
+  SOLD_ORDER
+  WASTE_SPILLAGE
+  AUDIT_ADJUSTMENT
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  PAY_IN
+  PAY_OUT
+  CASH_DROP
+}
+
+// -----------------------------------------------------------------------------
+// Tenants & Stores
+// -----------------------------------------------------------------------------
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  plan        String   @default("GROWTH")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stores      Store[]
+  users       User[]
+  categories  Category[]
+  products    Product[]
+  ingredients RawIngredient[]
+
+  @@index([slug])
+}
+
+model Store {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  code            String   // e.g. "STORE-01"
+  address         String?
+  phone           String?
+  currency        String   @default("USD")
+  khrRate         Float    @default(4000.0)
+  taxRate         Float    @default(0.10)
+  receiptHeader   String?  @default("Thank you for visiting!")
+  receiptFooter   String?  @default("Wi-Fi: CafeGuest / Pass: Coffee2026")
+  currentTicketSeq Int     @default(1001)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles       UserStoreRole[]
+  orders          Order[]
+  shifts          CashShift[]
+  stockTransactions StockTransaction[]
+  ingredients     RawIngredient[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  name         String
+  email        String?  @unique
+  pinHash      String   // bcrypt hashed 4-6 digit quick login PIN
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  storeRoles   UserStoreRole[]
+  cashShifts   CashShift[]
+  ordersHandled Order[]
+  stockAudits  StockTransaction[]
+
+  @@index([tenantId])
+}
+
+model UserStoreRole {
+  id        String    @id @default(uuid())
+  userId    String
+  storeId   String
+  role      StaffRole @default(CASHIER)
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([userId])
+  @@index([storeId])
+}
+
+// -----------------------------------------------------------------------------
+// Catalog & Modifiers
+// -----------------------------------------------------------------------------
+
+model Category {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  slug        String
+  icon        String   @default("Coffee")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products    Product[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  tenantId       String
+  categoryId     String
+  sku            String   @unique
+  name           String
+  description    String?
+  price          Float    // Base selling price in USD
+  costPrice      Float    @default(0.0) // Estimated BOM Cost Price
+  customizable   Boolean  @default(true)
+  imageUrl       String?
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category       Category        @relation(fields: [categoryId], references: [id])
+  modifierGroups ModifierGroup[]
+  recipes        ProductRecipe[]
+  orderItems     OrderItem[]
+
+  @@index([tenantId])
+  @@index([categoryId])
+}
+
+model ModifierGroup {
+  id          String   @id @default(uuid())
+  productId   String
+  name        String   // "Size", "Sweetness", "Ice Level", "Milk Option"
+  minSelect   Int      @default(1)
+  maxSelect   Int      @default(1)
+  isRequired  Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options     ModifierOption[]
+
+  @@index([productId])
+}
+
+model ModifierOption {
+  id                String   @id @default(uuid())
+  modifierGroupId   String
+  name              String   // "Regular", "Large", "Oat Milk", "50% Sweetness"
+  priceDelta        Float    @default(0.0) // e.g. +$0.50 for Large, +$0.60 for Oat Milk
+  isDefault         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  modifierGroup     ModifierGroup       @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+  recipes           ModifierRecipe[]
+  orderItemModifiers OrderItemModifier[]
+
+  @@index([modifierGroupId])
+}
+
+// -----------------------------------------------------------------------------
+// Inventory & Bill of Materials (BOM)
+// -----------------------------------------------------------------------------
+
+model RawIngredient {
+  id               String        @id @default(uuid())
+  tenantId         String
+  storeId          String
+  name             String        // "Espresso Coffee Beans", "Whole Fresh Milk", "16oz Paper Cup"
+  sku              String
+  unit             UnitOfMeasure @default(GRAM)
+  currentStock     Float         @default(0.0)
+  reorderThreshold Float         @default(100.0)
+  costPerUnit      Float         @default(0.0) // e.g. $0.015 per gram
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productRecipes   ProductRecipe[]
+  modifierRecipes  ModifierRecipe[]
+  transactions     StockTransaction[]
+
+  @@unique([storeId, sku])
+  @@index([storeId])
+  @@index([tenantId])
+}
+
+model ProductRecipe {
+  id             String        @id @default(uuid())
+  productId      String
+  ingredientId   String
+  quantity       Float         // Quantity required for 1 base product serving (e.g. 18 grams)
+  unit           UnitOfMeasure @default(GRAM)
+  createdAt      DateTime      @default(now())
+
+  product        Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient     RawIngredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@index([productId])
+  @@index([ingredientId])
+}
+
+model ModifierRecipe {
+  id               String        @id @default(uuid())
+  modifierOptionId String
+  ingredientId     String
+  quantityDelta    Float         // e.g. +70 ml milk, -200 ml whole milk +200 ml oat milk, etc.
+  unit             UnitOfMeasure @default(GRAM)
+  isReplacement    Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+
+  modifierOption   ModifierOption @relation(fields: [modifierOptionId], references: [id], onDelete: Cascade)
+  ingredient       RawIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([modifierOptionId])
+  @@index([ingredientId])
+}
+
+model StockTransaction {
+  id             String               @id @default(uuid())
+  storeId        String
+  ingredientId   String
+  type           StockTransactionType
+  quantityChange Float                // Negative for sales/waste, positive for restock
+  remainingStock Float                // Stock snapshot after transaction
+  referenceId    String?              // Order ID, Restock Batch PO#, or Shift ID
+  notes          String?
+  createdById    String?
+  createdAt      DateTime             @default(now())
+
+  store          Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ingredient     RawIngredient        @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  createdBy      User?                @relation(fields: [createdById], references: [id])
+
+  @@index([storeId])
+  @@index([ingredientId])
+  @@index([referenceId])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Orders, Tickets & Kitchen Operations
+// -----------------------------------------------------------------------------
+
+model Order {
+  id              String         @id @default(uuid())
+  tenantId        String
+  storeId         String
+  shiftId         String?
+  cashierId       String?
+  ticketNumber    String         // e.g. "1153"
+  invoiceNumber   String         // e.g. "INV-1001153"
+  channel         OrderChannel   @default(WALK_IN)
+  status          OrderStatus    @default(PENDING)
+  paymentStatus   PaymentStatus  @default(UNPAID)
+  
+  subtotal        Float
+  tax             Float
+  discount        Float          @default(0.0)
+  total           Float
+  currency        String         @default("USD")
+  khrRate         Float          @default(4000.0)
+  
+  tableNumber     String?
+  customerName    String?
+  notes           String?
+  
+  preparingAt     DateTime?
+  readyAt         DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shift           CashShift?     @relation(fields: [shiftId], references: [id])
+  cashier         User?          @relation(fields: [cashierId], references: [id])
+  items           OrderItem[]
+  payments        PaymentTransaction[]
+
+  @@index([storeId, createdAt])
+  @@index([storeId, status])
+  @@index([shiftId])
+}
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String
+  productId      String
+  productName    String
+  quantity       Int      @default(1)
+  unitPrice      Float
+  totalPrice     Float
+  notes          String?
+  isBumped       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  order          Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product             @relation(fields: [productId], references: [id])
+  modifiers      OrderItemModifier[]
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderItemModifier {
+  id               String   @id @default(uuid())
+  orderItemId      String
+  modifierOptionId String
+  groupName        String   // "Size", "Sweetness", "Ice"
+  optionName       String   // "Large", "50%", "Less Ice"
+  priceDelta       Float    @default(0.0)
+  createdAt        DateTime @default(now())
+
+  orderItem        OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  modifierOption   ModifierOption @relation(fields: [modifierOptionId], references: [id])
+
+  @@index([orderItemId])
+}
+
+model PaymentTransaction {
+  id              String        @id @default(uuid())
+  orderId         String
+  storeId         String
+  shiftId         String?
+  method          PaymentMethod @default(CASH_USD)
+  amountUSD       Float
+  amountKHR       Float
+  changeGivenUSD  Float         @default(0.0)
+  changeGivenKHR  Float         @default(0.0)
+  transactionRef  String?       // QR dynamic payload or gateway reference
+  qrPayload       String?
+  isConfirmed     Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  shift           CashShift?    @relation(fields: [shiftId], references: [id])
+
+  @@index([orderId])
+  @@index([shiftId])
+  @@index([transactionRef])
+}
+
+// -----------------------------------------------------------------------------
+// Cash Drawer & Shift Management
+// -----------------------------------------------------------------------------
+
+model CashShift {
+  id                    String            @id @default(uuid())
+  storeId               String
+  cashierId             String
+  openedAt              DateTime          @default(now())
+  closedAt              DateTime?
+  status                ShiftStatus       @default(OPEN)
+  
+  startingFloatUSD      Float             @default(0.0)
+  startingFloatKHR      Float             @default(0.0)
+  
+  endingCashActualUSD   Float?
+  endingCashActualKHR   Float?
+  
+  endingCashExpectedUSD Float?
+  endingCashExpectedKHR Float?
+  
+  overShortUSD          Float?
+  overShortKHR          Float?
+  
+  totalCashSalesUSD     Float             @default(0.0)
+  totalCashSalesKHR     Float             @default(0.0)
+  totalQRSalesUSD       Float             @default(0.0)
+  totalCardSalesUSD     Float             @default(0.0)
+  totalDiscountsUSD     Float             @default(0.0)
+  totalRefundsUSD       Float             @default(0.0)
+  orderCount            Int               @default(0)
+  
+  zReportJson           String?           // Serialized JSON of full Z-Report
+  notes                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  store                 Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  cashier               User              @relation(fields: [cashierId], references: [id])
+  orders                Order[]
+  payments              PaymentTransaction[]
+  cashMovements         CashMovement[]
+
+  @@index([storeId, status])
+  @@index([cashierId])
+}
+
+model CashMovement {
+  id              String           @id @default(uuid())
+  shiftId         String
+  type            CashMovementType
+  amountUSD       Float            @default(0.0)
+  amountKHR       Float            @default(0.0)
+  reason          String           // "Petty cash for ice delivery", "Safe cash drop"
+  authorizedById  String?
+  createdAt       DateTime         @default(now())
+
+  shift           CashShift        @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+}
