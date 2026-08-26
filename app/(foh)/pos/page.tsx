@@ -1425,145 +1425,6 @@ export default function PosRegisterPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Right-Hand Inspection Drawer */}
-                {inspectingOrder && (
-                  <div className="w-full md:w-[380px] lg:w-[420px] border-l border-stone-200 bg-white p-5 flex flex-col justify-between shadow-lg overflow-y-auto animate-in slide-in-from-right duration-200 z-20 shrink-0">
-                    <div className="space-y-4">
-                      {/* Drawer Header */}
-                      <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-sm text-stone-900">Ticket #{inspectingOrder.ticketNumber}</span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                                inspectingOrder.status === "Void"
-                                  ? "bg-rose-100 text-rose-800"
-                                  : "bg-emerald-100 text-emerald-800"
-                              }`}
-                            >
-                              {inspectingOrder.status || "Completed"}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-stone-400 mt-0.5">
-                            {inspectingOrder.timestamp} · {inspectingOrder.channel}{inspectingOrder.table ? ` (${inspectingOrder.table})` : ""}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setInspectingOrder(null)}
-                          className="h-7 w-7 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      {/* Void Audit Card if Voided */}
-                      {inspectingOrder.status === "Void" && (
-                        <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 space-y-1 text-xs text-rose-900">
-                          <div className="flex items-center gap-1.5 font-black text-rose-800 uppercase tracking-wide text-[10px]">
-                            <Ban size={13} />
-                            <span>Void Audit Record</span>
-                          </div>
-                          <p className="text-[11px]">
-                            Reason: <span className="font-bold">{inspectingOrder.voidReason || "Order Cancelled"}</span>
-                          </p>
-                          <p className="text-[10px] text-rose-600">
-                            Authorized by: {inspectingOrder.voidAuthorizedBy || "Manager"} · {inspectingOrder.voidedAt || inspectingOrder.timestamp}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Items List */}
-                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block">Ordered Items</span>
-                        {inspectingOrder.items.map((item, idx) => (
-                          <div key={idx} className="p-2.5 rounded-xl bg-stone-50 border border-stone-200/80 flex justify-between items-start text-xs">
-                            <div>
-                              <span className="font-black text-stone-900">{item.qty}x {item.name}</span>
-                              {item.modifiers && (
-                                <p className="text-[10px] text-stone-400 mt-0.5">{item.modifiers}</p>
-                              )}
-                            </div>
-                            <span className="font-black text-stone-900">{formatUSD(item.total)}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Financial Breakdown Card */}
-                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-1.5 text-xs">
-                        <div className="flex justify-between text-stone-500">
-                          <span>Subtotal</span>
-                          <span className="font-bold">{formatUSD(inspectingOrder.subtotal)}</span>
-                        </div>
-                        {inspectingOrder.discountUSD && inspectingOrder.discountUSD > 0 && (
-                          <div className="flex justify-between text-amber-700">
-                            <span>Discount</span>
-                            <span className="font-bold">-{formatUSD(inspectingOrder.discountUSD)}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between text-stone-500">
-                          <span>Tax (10%)</span>
-                          <span className="font-bold">{formatUSD(inspectingOrder.tax)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm font-black text-stone-900 border-t border-stone-200 pt-1.5 mt-1">
-                          <span>Total Due</span>
-                          <div className="text-right">
-                            <div>{formatUSD(inspectingOrder.total)}</div>
-                            <div className="text-[10px] font-bold text-amber-900">{formatKHRDirect(roundKHR(inspectingOrder.total * KHR_RATE))}</div>
-                          </div>
-                        </div>
-                        <div className="flex justify-between text-[10px] text-stone-400 border-t border-stone-100 pt-1 mt-1">
-                          <span>Paid with {inspectingOrder.paymentMethod}</span>
-                          {inspectingOrder.changeUSD > 0 && <span>Change: {formatUSD(inspectingOrder.changeUSD)}</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 1-Tap Utility Actions (2x2 Grid) */}
-                    <div className="space-y-2 pt-4 border-t border-stone-100">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block">Quick Utilities</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSilentThermalPrint(inspectingOrder)}
-                          className="p-2.5 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                        >
-                          <Printer size={14} className="text-stone-600" />
-                          <span>Print Receipt</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleReorder(inspectingOrder)}
-                          className="p-2.5 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                        >
-                          <RotateCcw size={14} />
-                          <span>Reorder</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleReprintLabel(inspectingOrder)}
-                          className="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                        >
-                          <Send size={14} className="text-teal-700" />
-                          <span>Reprint Label</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={inspectingOrder.status === "Void"}
-                          onClick={() => handleInitiateVoid(inspectingOrder)}
-                          className="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 disabled:opacity-40 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                        >
-                          <Ban size={14} />
-                          <span>Void Order</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1903,432 +1764,601 @@ export default function PosRegisterPage() {
           </nav>
         </div>
 
-        {/* ── RIGHT CART SIDEBAR (Visible ONLY in Sales / Register Mode) ── */}
-        {activeNav === "register" && (
-          <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white shadow-lg z-30 overflow-hidden">
-          {/* Header & Order Channel Selector */}
-          <div className="shrink-0 px-4 py-2 border-b border-stone-100 space-y-1.5 bg-stone-50/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-stone-900">Ticket #{ticketNumber}</span>
-                <span className="text-[10px] font-medium text-stone-400">({cart.length} {cart.length === 1 ? "item" : "items"})</span>
-              </div>
-
-              {cart.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(600);
-                    dispatch({ type: "CLEAR" });
-                  }}
-                  className="text-[10px] font-bold text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
-                >
-                  Clear All
-                </button>
-              )}
-            </div>
-
-            {/* Order Channel Selector */}
-            <div className="grid grid-cols-3 gap-1 bg-stone-100 p-0.5 rounded-xl">
-              {(["Walk-in", "Takeaway", "Delivery"] as const).map((ch) => (
-                <button
-                  key={ch}
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(900);
-                    setOrderChannel(ch);
-                  }}
-                  className={`py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                    orderChannel === ch ? "bg-white text-stone-900 shadow-2xs" : "text-stone-400 hover:text-stone-700"
-                  }`}
-                >
-                  {ch}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Flat Spreadsheet Table Headers ── */}
-          <div className="shrink-0 px-3 py-2 bg-stone-50/80 border-b border-stone-200/80 flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-wider">
-            <span className="flex-1">PRODUCT</span>
-            <span className="w-16 text-right">PRICE</span>
-            <span className="w-12 text-center">QTY</span>
-            <span className="w-20 text-right">AMOUNT</span>
-          </div>
-
-          {/* ── Table Rows: Clean, Flat Spreadsheet Layout (No Bulky Cards) ── */}
-          <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-stone-100">
-            {cart.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-center py-12 text-stone-300">
-                <ShoppingCart size={32} className="mb-2 stroke-[1.5]" />
-                <p className="text-xs font-bold text-stone-500">Cart is empty</p>
-                <p className="text-[10px] text-stone-400 mt-0.5">Tap menu cards to add items</p>
+        {/* ── UNIFIED RIGHT-SIDE PANEL (Cart in Sales, Order Inspector in Orders) ── */}
+        <aside className="flex w-84 sm:w-96 lg:w-[400px] shrink-0 flex-col h-full bg-white shadow-lg z-30 overflow-hidden border-l border-stone-200/80">
+          {activeNav === "orders" ? (
+            /* ── STATE IN ORDERS TAB: DEDICATED TICKET INSPECTION PANEL ── */
+            !inspectingOrder ? (
+              /* Empty State Placeholder (No ticket selected yet) */
+              <div className="flex h-full flex-col items-center justify-center text-center p-8 text-stone-300">
+                <div className="h-16 w-16 rounded-3xl bg-stone-100 flex items-center justify-center text-stone-400 mb-3 shadow-2xs">
+                  <ClipboardList size={32} className="stroke-[1.5]" />
+                </div>
+                <p className="text-sm font-black text-stone-700">No Order Selected</p>
+                <p className="text-xs text-stone-400 mt-1 max-w-[220px]">
+                  Select an order from the list on the left to view receipt details &amp; actions.
+                </p>
               </div>
             ) : (
-              <AnimatePresence initial={false}>
-                {cart.map((item) => {
-                  const effectiveActiveId = activeCartId || (cart.length > 0 ? cart[cart.length - 1].cartId : null);
-                  const isSelected = effectiveActiveId === item.cartId;
-                  const modifierValues = [
-                    item.notes,
-                    item.size?.replace(/\s*\(\+\$0\.00\)/, ""),
-                    item.sweetness === "0%"
-                      ? "No Sugar"
-                      : item.sweetness === "30%"
-                      ? "Less Sweet (30%)"
-                      : item.sweetness === "50%"
-                      ? "Half Sweet (50%)"
-                      : item.sweetness === "70%"
-                      ? "70% Sugar"
-                      : item.sweetness === "100%"
-                      ? "Normal Sweet"
-                      : item.sweetness
-                      ? `${item.sweetness} Sugar`
-                      : "",
-                    item.ice,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ");
-
-                  return (
-                    <motion.div
-                      key={item.cartId}
-                      layout
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -80 }}
-                      className="relative overflow-hidden"
-                    >
-                      {/* Bottom Layer (Delete action) */}
-                      <div
-                        className="absolute inset-0 bg-red-600 flex items-center justify-end pr-4 text-white z-0 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          soundFX.playBlip(600);
-                          dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </div>
-
-                      {/* Top Layer (Interactive row with solid opaque background) */}
-                      <motion.div
-                        drag="x"
-                        dragConstraints={{ left: -75, right: 0 }}
-                        dragElastic={0.05}
-                        onDragEnd={(_e, info) => {
-                          if (info.offset.x < -50) {
-                            soundFX.playBlip(600);
-                            dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
-                          }
-                        }}
-                        onClick={() => {
-                          soundFX.playBlip(950);
-                          setActiveCartId(item.cartId);
-                        }}
-                        className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
-                          isSelected
-                            ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
-                            : "bg-white hover:bg-stone-50/90 border-l-4 border-transparent"
+              /* Populated Selected Order Details */
+              <div className="flex flex-col h-full justify-between overflow-hidden">
+                {/* 1. Header with Ticket ID, Status Badge, and Deselect */}
+                <div className="shrink-0 px-4 py-3 border-b border-stone-100 bg-stone-50/70">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm text-stone-900">Ticket #{inspectingOrder.ticketNumber}</span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          inspectingOrder.status === "Void"
+                            ? "bg-rose-100 text-rose-800 border border-rose-200"
+                            : inspectingOrder.status === "On Hold"
+                            ? "bg-amber-100 text-amber-900 border border-amber-200"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                         }`}
                       >
-                        {/* PRODUCT (flex-1) */}
-                        <div className="flex-1 min-w-0 pr-2">
-                          <span
-                            className={`text-xs md:text-sm font-semibold truncate block leading-tight ${
-                              isSelected ? "text-stone-950 font-bold" : "text-stone-900"
+                        {inspectingOrder.status || "Completed"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setInspectingOrder(null)}
+                      className="h-6 w-6 rounded-full bg-stone-200/70 hover:bg-stone-300 text-stone-600 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
+                      title="Clear Selection"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    {inspectingOrder.timestamp} · {inspectingOrder.channel}{inspectingOrder.table ? ` (${inspectingOrder.table})` : ""}
+                  </p>
+                </div>
+
+                {/* Void Audit Box if Voided */}
+                {inspectingOrder.status === "Void" && (
+                  <div className="mx-3 my-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 shrink-0">
+                    <div className="flex items-center gap-1 font-black text-rose-800 uppercase text-[10px]">
+                      <Ban size={12} />
+                      <span>Void Audit Record</span>
+                    </div>
+                    <p className="text-[11px] mt-0.5">
+                      Reason: <span className="font-bold">{inspectingOrder.voidReason || "Order Cancelled"}</span>
+                    </p>
+                    <p className="text-[10px] text-rose-600">
+                      Authorized by: {inspectingOrder.voidAuthorizedBy || "Manager"} · {inspectingOrder.voidedAt || inspectingOrder.timestamp}
+                    </p>
+                  </div>
+                )}
+
+                {/* 2. Flat Spreadsheet Table Headers */}
+                <div className="shrink-0 px-3 py-2 bg-stone-50/80 border-b border-stone-200/80 flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+                  <span className="flex-1">PRODUCT</span>
+                  <span className="w-16 text-right">PRICE</span>
+                  <span className="w-10 text-center">QTY</span>
+                  <span className="w-18 text-right">AMOUNT</span>
+                </div>
+
+                {/* 3. Items List */}
+                <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-stone-100">
+                  {inspectingOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center py-2.5 px-3 hover:bg-stone-50/70 transition-colors">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <span className="text-xs font-bold text-stone-900 block leading-tight truncate">{item.name}</span>
+                        {item.modifiers && (
+                          <span className="text-[10px] text-stone-400 block leading-tight mt-0.5 whitespace-normal break-words">
+                            {item.modifiers}
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-16 text-right text-xs text-stone-600 shrink-0">{formatUSD(item.unitPrice)}</div>
+                      <div className="w-10 text-center text-xs font-bold text-stone-800 shrink-0">{item.qty}</div>
+                      <div className="w-18 text-right text-xs font-black text-stone-900 shrink-0">{formatUSD(item.total)}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 4. Financial Breakdown Summary */}
+                <div className="shrink-0 p-3.5 bg-stone-50/80 border-t border-stone-200/80 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-stone-500 text-xs">
+                    <span>Subtotal</span>
+                    <span className="font-bold">{formatUSD(inspectingOrder.subtotal)}</span>
+                  </div>
+                  {inspectingOrder.discountUSD && inspectingOrder.discountUSD > 0 && (
+                    <div className="flex justify-between text-amber-700 text-xs">
+                      <span>Discount</span>
+                      <span className="font-bold">-{formatUSD(inspectingOrder.discountUSD)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-stone-500 text-xs">
+                    <span>Tax (10%)</span>
+                    <span className="font-bold">{formatUSD(inspectingOrder.tax)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-black text-stone-900 border-t border-stone-200/80 pt-1.5 mt-0.5">
+                    <span>Total Due</span>
+                    <div className="text-right">
+                      <div>{formatUSD(inspectingOrder.total)}</div>
+                      <div className="text-[10px] font-bold text-amber-900">{formatKHRDirect(roundKHR(inspectingOrder.total * KHR_RATE))}</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-stone-400 border-t border-stone-100 pt-1 mt-0.5">
+                    <span>Paid with {inspectingOrder.paymentMethod}</span>
+                    {inspectingOrder.changeUSD > 0 && <span>Change: {formatUSD(inspectingOrder.changeUSD)}</span>}
+                  </div>
+                </div>
+
+                {/* 5. Bottom Order Utility Action Bar (2x2 Grid) */}
+                <div className="shrink-0 p-2.5 bg-stone-100/70 border-t border-stone-200/80">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSilentThermalPrint(inspectingOrder)}
+                      className="h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Printer size={14} className="text-stone-600" />
+                      <span>Print Receipt</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleReorder(inspectingOrder)}
+                      className="h-11 sm:h-12 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Reorder</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleReprintLabel(inspectingOrder)}
+                      className="h-11 sm:h-12 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Send size={14} className="text-teal-700" />
+                      <span>Reprint Label</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={inspectingOrder.status === "Void"}
+                      onClick={() => handleInitiateVoid(inspectingOrder)}
+                      className="h-11 sm:h-12 rounded-xl bg-rose-50 hover:bg-rose-100 disabled:opacity-40 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Ban size={14} />
+                      <span>Void Order</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          ) : (
+            /* ── STATE IN SALES / REGISTER TAB: ACTIVE CHECKOUT CART ── */
+            <>
+              {/* Header & Order Channel Selector */}
+              <div className="shrink-0 px-4 py-2 border-b border-stone-100 space-y-1.5 bg-stone-50/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-stone-900">Ticket #{ticketNumber}</span>
+                    <span className="text-[10px] font-medium text-stone-400">({cart.length} {cart.length === 1 ? "item" : "items"})</span>
+                  </div>
+
+                  {cart.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(600);
+                        dispatch({ type: "CLEAR" });
+                      }}
+                      className="text-[10px] font-bold text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+
+                {/* Order Channel Selector */}
+                <div className="grid grid-cols-3 gap-1 bg-stone-100 p-0.5 rounded-xl">
+                  {(["Walk-in", "Takeaway", "Delivery"] as const).map((ch) => (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(900);
+                        setOrderChannel(ch);
+                      }}
+                      className={`py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                        orderChannel === ch ? "bg-white text-stone-900 shadow-2xs" : "text-stone-400 hover:text-stone-700"
+                      }`}
+                    >
+                      {ch}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Flat Spreadsheet Table Headers ── */}
+              <div className="shrink-0 px-3 py-2 bg-stone-50/80 border-b border-stone-200/80 flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+                <span className="flex-1">PRODUCT</span>
+                <span className="w-16 text-right">PRICE</span>
+                <span className="w-12 text-center">QTY</span>
+                <span className="w-20 text-right">AMOUNT</span>
+              </div>
+
+              {/* ── Table Rows: Clean, Flat Spreadsheet Layout (No Bulky Cards) ── */}
+              <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-stone-100">
+                {cart.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-center py-12 text-stone-300">
+                    <ShoppingCart size={32} className="mb-2 stroke-[1.5]" />
+                    <p className="text-xs font-bold text-stone-500">Cart is empty</p>
+                    <p className="text-[10px] text-stone-400 mt-0.5">Tap menu cards to add items</p>
+                  </div>
+                ) : (
+                  <AnimatePresence initial={false}>
+                    {cart.map((item) => {
+                      const effectiveActiveId = activeCartId || (cart.length > 0 ? cart[cart.length - 1].cartId : null);
+                      const isSelected = effectiveActiveId === item.cartId;
+                      const modifierValues = [
+                        item.notes,
+                        item.size?.replace(/\s*\(\+\$0\.00\)/, ""),
+                        item.sweetness === "0%"
+                          ? "No Sugar"
+                          : item.sweetness === "30%"
+                          ? "Less Sweet (30%)"
+                          : item.sweetness === "50%"
+                          ? "Half Sweet (50%)"
+                          : item.sweetness === "70%"
+                          ? "70% Sugar"
+                          : item.sweetness === "100%"
+                          ? "Normal Sweet"
+                          : item.sweetness
+                          ? `${item.sweetness} Sugar`
+                          : "",
+                        item.ice,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ");
+
+                      return (
+                        <motion.div
+                          key={item.cartId}
+                          layout
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -80 }}
+                          className="relative overflow-hidden"
+                        >
+                          {/* Bottom Layer (Delete action) */}
+                          <div
+                            className="absolute inset-0 bg-red-600 flex items-center justify-end pr-4 text-white z-0 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              soundFX.playBlip(600);
+                              dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </div>
+
+                          {/* Top Layer (Interactive row with solid opaque background) */}
+                          <motion.div
+                            drag="x"
+                            dragConstraints={{ left: -75, right: 0 }}
+                            dragElastic={0.05}
+                            onDragEnd={(_e, info) => {
+                              if (info.offset.x < -50) {
+                                soundFX.playBlip(600);
+                                dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: 0 });
+                              }
+                            }}
+                            onClick={() => {
+                              soundFX.playBlip(950);
+                              setActiveCartId(item.cartId);
+                            }}
+                            className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
+                              isSelected
+                                ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
+                                : "bg-white hover:bg-stone-50/90 border-l-4 border-transparent"
                             }`}
                           >
-                            {item.name}
-                          </span>
-                          <span className="text-[11px] text-stone-400 font-normal leading-tight mt-0.5 whitespace-normal break-words block">
-                            {modifierValues || "Regular"}
-                          </span>
-                        </div>
+                            {/* PRODUCT (flex-1) */}
+                            <div className="flex-1 min-w-0 pr-2">
+                              <span
+                                className={`text-xs md:text-sm font-semibold truncate block leading-tight ${
+                                  isSelected ? "text-stone-950 font-bold" : "text-stone-900"
+                                }`}
+                              >
+                                {item.name}
+                              </span>
+                              <span className="text-[11px] text-stone-400 font-normal leading-tight mt-0.5 whitespace-normal break-words block">
+                                {modifierValues || "Regular"}
+                              </span>
+                            </div>
 
-                        {/* PRICE (w-16 text-right) */}
-                        <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0">
-                          {formatUSD(item.price)}
-                        </div>
+                            {/* PRICE (w-16 text-right) */}
+                            <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0">
+                              {formatUSD(item.price)}
+                            </div>
 
-                        {/* QTY (w-12 text-center): Seamless, blended text */}
-                        <div className="w-12 flex items-center justify-center shrink-0">
-                          <span
-                            onMouseDown={() => handleQtyTouchStart(item)}
-                            onMouseUp={handleQtyTouchEnd}
-                            onMouseLeave={handleQtyTouchEnd}
-                            onTouchStart={() => handleQtyTouchStart(item)}
-                            onTouchEnd={handleQtyTouchEnd}
-                            onClick={(e) => handleQtyClick(e, item)}
-                            title="Tap to +1, Hold (400ms) to edit"
-                            className="text-xs md:text-sm font-semibold text-stone-700 w-10 text-center py-1 cursor-pointer hover:text-stone-950 transition-colors select-none"
-                          >
-                            {item.qty}
-                          </span>
-                        </div>
+                            {/* QTY (w-12 text-center): Seamless, blended text */}
+                            <div className="w-12 flex items-center justify-center shrink-0">
+                              <span
+                                onMouseDown={() => handleQtyTouchStart(item)}
+                                onMouseUp={handleQtyTouchEnd}
+                                onMouseLeave={handleQtyTouchEnd}
+                                onTouchStart={() => handleQtyTouchStart(item)}
+                                onTouchEnd={handleQtyTouchEnd}
+                                onClick={(e) => handleQtyClick(e, item)}
+                                title="Tap to +1, Hold (400ms) to edit"
+                                className="text-xs md:text-sm font-semibold text-stone-700 w-10 text-center py-1 cursor-pointer hover:text-stone-950 transition-colors select-none"
+                              >
+                                {item.qty}
+                              </span>
+                            </div>
 
-                        {/* AMOUNT (w-20 text-right font-bold) */}
-                        <div
-                          className={`w-20 text-right text-xs md:text-sm font-bold shrink-0 ${
-                            isSelected ? "text-stone-950 font-black" : "text-stone-900"
-                          }`}
-                        >
-                          {formatUSD(item.price * item.qty)}
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            )}
-          </div>
-
-          {/* ── Totals & Bold Dual Currency (USD $X.XX | KHR X,XXX ៛) ── */}
-          <div className="shrink-0 px-4 py-2 border-t border-stone-200/80 bg-stone-50/90 space-y-1">
-            <div className="flex justify-between text-[11px] text-stone-500 font-medium">
-              <span>Subtotal (Tax Included 10%)</span>
-              <span>{formatUSD(rawSubtotal)}</span>
-            </div>
-            {discountUSD > 0 && (
-              <div className="flex justify-between text-[11px] text-amber-700 font-bold">
-                <span>Discount Promo</span>
-                <span>-{formatUSD(discountUSD)}</span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-dashed border-stone-300 pt-1.5">
-              <span className="text-xs font-black text-stone-800 uppercase tracking-wider">Total Due:</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-base font-black text-stone-950 leading-none">USD {formatUSD(totalUSD)}</span>
-                <span className="text-stone-300 text-sm font-light">|</span>
-                <span className="text-xs font-black text-amber-900 leading-none bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200">
-                  KHR {formatKHRDirect(totalKHR)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Action Keypad (Flush at bottom right corner) ── */}
-          <div className="shrink-0 p-2.5 bg-stone-100/95 border-t border-stone-200">
-            {showNonCashOptions ? (
-              <div className="grid grid-cols-4 gap-1.5 animate-in fade-in duration-150">
-                {/* Row 1: Payment Options (2 cols each, exact matching button height) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(880);
-                    setShowNonCashOptions(false);
-                    setKhqrTimer(120);
-                    setShowKHQRModal(true);
-                  }}
-                  className="col-span-2 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-xs uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                  style={{ background: "#4A2E1F" }}
-                >
-                  <QrCode size={16} />
-                  <span>Bakong KHQR</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(880);
-                    setShowNonCashOptions(false);
-                    handleCompleteSale("CREDIT CARD");
-                  }}
-                  className="col-span-2 h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <CreditCard size={16} />
-                  <span>Credit Card</span>
-                </button>
-
-                {/* Row 2: Back Button (4 cols full-width, exact matching button height) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(750);
-                    setShowNonCashOptions(false);
-                  }}
-                  className="col-span-4 h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <ArrowLeft size={14} />
-                  <span>← Back to Actions</span>
-                </button>
-              </div>
-            ) : showPromoOptions ? (
-              <div className="grid grid-cols-4 gap-1.5 animate-in fade-in duration-150">
-                {/* Row 1: Promotion & Coupon (2 cols each, exact matching button height) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(880);
-                    setShowPromoOptions(false);
-                    setShowPromoModal(true);
-                  }}
-                  className="col-span-2 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-xs uppercase shadow-2xs active:scale-95 transition-all cursor-pointer bg-amber-700 hover:bg-amber-800"
-                >
-                  <Percent size={15} />
-                  <span>Promotion</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(880);
-                    setShowPromoOptions(false);
-                    setShowCouponModal(true);
-                  }}
-                  className="col-span-2 h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <Ticket size={15} />
-                  <span>Coupon</span>
-                </button>
-
-                {/* Row 2: Back Button (4 cols full-width, exact matching button height) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(750);
-                    setShowPromoOptions(false);
-                  }}
-                  className="col-span-4 h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <ArrowLeft size={14} />
-                  <span>← Back to Actions</span>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-1.5">
-                {/* Row 1 */}
-                <button
-                  type="button"
-                  onClick={() => handleInitiatePayment("CASH")}
-                  className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <Banknote size={14} />
-                  <span>CASH</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleInitiatePayment("PAYMENT")}
-                  className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                  style={{ background: "#4A2E1F" }}
-                >
-                  <QrCode size={14} />
-                  <span>PAYMENT</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!activeItem) return;
-                    soundFX.playBlip(800);
-                    setQtyInput("");
-                    setShowQtyModal(true);
-                  }}
-                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  <Hash size={13} className="text-amber-800" />
-                  <span>QUANTITY</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (cart.length === 0) {
-                      soundFX.playWarning();
-                      showNotification("Cart is Empty", "Add items to cart before selecting promotion or coupon.", "warning");
-                      return;
-                    }
-                    soundFX.playBlip(800);
-                    setShowNonCashOptions(false);
-                    setShowPromoOptions(true);
-                  }}
-                  className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                    discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
-                  }`}
-                >
-                  <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
-                  <span>PROMOTION</span>
-                </button>
-
-                {/* Row 2 */}
-                <button
-                  type="button"
-                  onClick={() => handleInitiatePayment("KITCHEN")}
-                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-teal-700 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  <Send size={13} className="text-teal-700" />
-                  <span>KITCHEN</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFX.playBlip(800);
-                    try {
-                      window.print();
-                    } catch {}
-                  }}
-                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  <Printer size={13} className="text-stone-600" />
-                  <span>PRINT</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDeleteOrder}
-                  className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-                >
-                  <Trash2 size={13} />
-                  <span>DELETE</span>
-                </button>
-
-                {/* HOLD / RESUME Button (1-Tap Single Hold Flow with Auto-Merge) */}
-                {hasHeldOrder ? (
-                  <button
-                    type="button"
-                    onClick={handleResumeWithMerge}
-                    title={`Click to resume / auto-merge Ticket #${singleHeldOrder?.ticketNumber}`}
-                    className="h-11 sm:h-12 rounded-xl border border-amber-400 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs animate-pulse"
-                  >
-                    <PlayCircle size={13} className="text-amber-900" />
-                    <span>RESUME (1)</span>
-                  </button>
-                ) : isResumedOrder ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFX.playWarning();
-                      showNotification("Cannot Re-Hold", "This order was already resumed and cannot be put on hold again.", "warning", 2500);
-                    }}
-                    title="Resumed tickets cannot be held again"
-                    className="h-11 sm:h-12 rounded-xl border border-stone-200 bg-stone-100 text-stone-400 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center cursor-not-allowed opacity-60 shadow-2xs"
-                  >
-                    <PauseCircle size={13} className="text-stone-400" />
-                    <span>HOLD (0)</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleDirectHoldOrder}
-                    title={cart.length > 0 ? "Hold active ticket (1-tap)" : "Cart is empty"}
-                    className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                      cart.length > 0
-                        ? "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
-                        : "bg-white border-stone-200 text-stone-400 hover:bg-stone-50"
-                    }`}
-                  >
-                    <PauseCircle size={13} className={cart.length > 0 ? "text-amber-700" : "text-stone-400"} />
-                    <span>HOLD (0)</span>
-                  </button>
+                            {/* AMOUNT (w-20 text-right font-bold) */}
+                            <div className="w-20 text-right text-xs md:text-sm font-bold text-stone-900 shrink-0">
+                              {formatUSD(item.price * item.qty)}
+                            </div>
+                          </motion.div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 )}
               </div>
-            )}
-          </div>
+
+              {/* Financial Breakdown (Fixed Height for zero layout shift) */}
+              <div className="shrink-0 border-t border-stone-200/80 bg-stone-50/50 p-2 sm:p-2.5 space-y-0.5">
+                <div className="flex justify-between text-xs text-stone-500">
+                  <span>Subtotal</span>
+                  <span className="font-bold text-stone-700">{formatUSD(rawSubtotal)}</span>
+                </div>
+
+                <div className="flex justify-between text-xs text-stone-500">
+                  <span>Tax (10%)</span>
+                  <span className="font-bold text-stone-700">{formatUSD(tax)}</span>
+                </div>
+
+                {discountUSD > 0 && (
+                  <div className="flex justify-between text-xs text-amber-700 font-bold">
+                    <span>Discount</span>
+                    <span>-{formatUSD(discountUSD)}</span>
+                  </div>
+                )}
+
+                {/* Grand Total Row */}
+                <div className="flex items-baseline justify-between border-t border-stone-200/80 pt-1 mt-0.5">
+                  <span className="text-xs font-black text-stone-900 uppercase tracking-tight">Total</span>
+                  <div className="text-right">
+                    <span className="text-sm sm:text-base font-black text-stone-900 tracking-tight block">
+                      {formatUSD(totalUSD)}
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-900 block leading-tight">
+                      {formatKHRDirect(totalKHR)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── 2x4 Action Keypad ── */}
+              <div className="shrink-0 p-2 sm:p-2.5 bg-stone-100/80 border-t border-stone-200/80">
+                {showNonCashOptions ? (
+                  <div className="grid grid-cols-4 gap-1.5 animate-in fade-in duration-150">
+                    {/* Row 1: Payment Options (2 cols each, exact matching button height) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(880);
+                        setShowNonCashOptions(false);
+                        setKhqrTimer(120);
+                        setShowKHQRModal(true);
+                      }}
+                      className="col-span-2 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-xs uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                      style={{ background: "#4A2E1F" }}
+                    >
+                      <QrCode size={16} />
+                      <span>Bakong KHQR</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(880);
+                        setShowNonCashOptions(false);
+                        handleCompleteSale("CREDIT CARD");
+                      }}
+                      className="col-span-2 h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <CreditCard size={16} />
+                      <span>Credit Card</span>
+                    </button>
+
+                    {/* Row 2: Back Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(750);
+                        setShowNonCashOptions(false);
+                      }}
+                      className="col-span-4 h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <ArrowLeft size={14} />
+                      <span>← Back to Actions</span>
+                    </button>
+                  </div>
+                ) : showPromoOptions ? (
+                  <div className="grid grid-cols-4 gap-1.5 animate-in fade-in duration-150">
+                    {/* Row 1: Promotion & Coupon */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(880);
+                        setShowPromoOptions(false);
+                        setShowPromoModal(true);
+                      }}
+                      className="col-span-2 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-xs uppercase shadow-2xs active:scale-95 transition-all cursor-pointer bg-amber-700 hover:bg-amber-800"
+                    >
+                      <Percent size={15} />
+                      <span>Promotion</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(880);
+                        setShowPromoOptions(false);
+                        setShowCouponModal(true);
+                      }}
+                      className="col-span-2 h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Ticket size={15} />
+                      <span>Coupon</span>
+                    </button>
+
+                    {/* Row 2: Back Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(750);
+                        setShowPromoOptions(false);
+                      }}
+                      className="col-span-4 h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <ArrowLeft size={14} />
+                      <span>← Back to Actions</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {/* Row 1 */}
+                    <button
+                      type="button"
+                      onClick={() => handleInitiatePayment("CASH")}
+                      className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Banknote size={14} />
+                      <span>CASH</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleInitiatePayment("PAYMENT")}
+                      className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                      style={{ background: "#4A2E1F" }}
+                    >
+                      <QrCode size={14} />
+                      <span>PAYMENT</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!activeItem) return;
+                        soundFX.playBlip(800);
+                        setQtyInput("");
+                        setShowQtyModal(true);
+                      }}
+                      className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <Hash size={13} className="text-amber-800" />
+                      <span>QUANTITY</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (cart.length === 0) {
+                          soundFX.playWarning();
+                          showNotification("Cart is Empty", "Add items to cart before selecting promotion or coupon.", "warning");
+                          return;
+                        }
+                        soundFX.playBlip(800);
+                        setShowNonCashOptions(false);
+                        setShowPromoOptions(true);
+                      }}
+                      className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                        discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
+                      }`}
+                    >
+                      <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
+                      <span>PROMOTION</span>
+                    </button>
+
+                    {/* Row 2 */}
+                    <button
+                      type="button"
+                      onClick={() => handleInitiatePayment("KITCHEN")}
+                      className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-teal-700 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <Send size={13} className="text-teal-700" />
+                      <span>KITCHEN</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(800);
+                        try {
+                          window.print();
+                        } catch {}
+                      }}
+                      className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <Printer size={13} className="text-stone-600" />
+                      <span>PRINT</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDeleteOrder}
+                      className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <Trash2 size={13} />
+                      <span>DELETE</span>
+                    </button>
+
+                    {/* HOLD / RESUME Button (1-Tap Single Hold Flow with Auto-Merge) */}
+                    {hasHeldOrder ? (
+                      <button
+                        type="button"
+                        onClick={handleResumeWithMerge}
+                        title={`Click to resume / auto-merge Ticket #${singleHeldOrder?.ticketNumber}`}
+                        className="h-11 sm:h-12 rounded-xl border border-amber-400 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs animate-pulse"
+                      >
+                        <PlayCircle size={13} className="text-amber-900" />
+                        <span>RESUME (1)</span>
+                      </button>
+                    ) : isResumedOrder ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFX.playWarning();
+                          showNotification("Cannot Re-Hold", "This order was already resumed and cannot be put on hold again.", "warning", 2500);
+                        }}
+                        title="Resumed tickets cannot be held again"
+                        className="h-11 sm:h-12 rounded-xl border border-stone-200 bg-stone-100 text-stone-400 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center cursor-not-allowed opacity-60 shadow-2xs"
+                      >
+                        <PauseCircle size={13} className="text-stone-400" />
+                        <span>HOLD (0)</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleDirectHoldOrder}
+                        title={cart.length > 0 ? "Hold active ticket (1-tap)" : "Cart is empty"}
+                        className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                          cart.length > 0
+                            ? "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+                            : "bg-white border-stone-200 text-stone-400 hover:bg-stone-50"
+                        }`}
+                      >
+                        <PauseCircle size={13} className={cart.length > 0 ? "text-amber-700" : "text-stone-400"} />
+                        <span>HOLD (0)</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </aside>
-        )}
       </div>
 
       {/* ── MODALS ── */}
