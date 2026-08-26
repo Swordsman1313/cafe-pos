@@ -528,6 +528,7 @@ export default function PosRegisterPage() {
   const [cashInputUSD, setCashInputUSD] = useState<string>("");
   const [cashInputKHR, setCashInputKHR] = useState<string>("");
   const [changeFormat, setChangeFormat] = useState<"ALL_KHR" | "SPLIT_USD_KHR">("ALL_KHR");
+  const [customUSDChange, setCustomUSDChange] = useState<number | null>(null);
 
   // Qty Numpad State
   const [qtyInput, setQtyInput] = useState<string>("");
@@ -1700,75 +1701,130 @@ export default function PosRegisterPage() {
             </div>
 
             {/* Balance / Change Due Display Box */}
-            {changeDueUSD > 0 ? (
-              <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-black text-emerald-900 uppercase tracking-wider block">
-                      {changeFormat === "ALL_KHR" ? "Change Due (All in Riel)" : "Change Due (USD + Riel)"}
-                    </span>
-                    {changeFormat === "ALL_KHR" ? (
-                      <div>
-                        <span className="text-xl font-black text-emerald-800 leading-tight block">
-                          {formatKHRDirect(changeDueKHR)}
-                        </span>
-                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
-                          ≈ {formatUSD(changeDueUSD)}
-                        </span>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-baseline gap-1.5 mt-0.5">
-                          {Math.floor(changeDueUSD) > 0 && (
-                            <span className="text-xl font-black text-emerald-800 leading-tight">
-                              ${Math.floor(changeDueUSD)}.00
-                            </span>
-                          )}
-                          {Math.floor(changeDueUSD) > 0 && roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE) > 0 && (
-                            <span className="text-sm font-bold text-emerald-600">+</span>
-                          )}
-                          {roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE) > 0 && (
-                            <span className="text-lg font-black text-emerald-700 leading-tight">
-                              {formatKHRDirect(roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE))}
-                            </span>
-                          )}
-                          {Math.floor(changeDueUSD) === 0 && roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE) === 0 && (
-                            <span className="text-lg font-black text-emerald-800">$0.00</span>
-                          )}
+            {(() => {
+              const maxDollarBills = changeDueUSD > 0 ? Math.floor(changeDueUSD) : 0;
+              const effectiveUSDGiven = customUSDChange !== null ? Math.min(maxDollarBills, customUSDChange) : 0;
+              const remainingRielUSD = Math.max(0, changeDueUSD - effectiveUSDGiven);
+              const remainingRielKHR = roundKHR(remainingRielUSD * KHR_RATE);
+
+              return changeDueUSD > 0 ? (
+                <div className="p-3.5 sm:p-4 rounded-3xl bg-emerald-50 border-2 border-emerald-300 space-y-2.5 shadow-xs">
+                  {/* Big Prominent Readout */}
+                  <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2.5">
+                    <div>
+                      <span className="text-[10px] font-black text-emerald-950 uppercase tracking-wider block">
+                        {effectiveUSDGiven > 0 ? "Change to Hand (USD + Riel)" : "Change Due (All in Riel)"}
+                      </span>
+                      {effectiveUSDGiven > 0 ? (
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-2xl sm:text-3xl font-black text-emerald-900 leading-none tracking-tight">
+                            ${effectiveUSDGiven}.00
+                          </span>
+                          <span className="text-base font-bold text-emerald-600">+</span>
+                          <span className="text-2xl sm:text-3xl font-black text-emerald-800 leading-none tracking-tight">
+                            {formatKHRDirect(remainingRielKHR)}
+                          </span>
                         </div>
-                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
-                          Total: {formatKHRDirect(changeDueKHR)}
-                        </span>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="mt-1">
+                          <span className="text-2xl sm:text-3xl font-black text-emerald-800 leading-none tracking-tight block">
+                            {formatKHRDirect(changeDueKHR)}
+                          </span>
+                          <span className="text-xs font-semibold text-stone-500 mt-1 block">
+                            ≈ {formatUSD(changeDueUSD)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-1 rounded-full inline-block border border-emerald-200">
+                        Total: {formatKHRDirect(changeDueKHR)}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Toggle Button to Switch between All Riel and Dollar + Riel */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip(900);
-                      setChangeFormat((prev) => (prev === "ALL_KHR" ? "SPLIT_USD_KHR" : "ALL_KHR"));
-                    }}
-                    className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-900 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95"
-                  >
-                    <span>💱</span>
-                    <span>{changeFormat === "ALL_KHR" ? "Change in Dollar + Riel" : "Change in All Riel"}</span>
-                  </button>
+                  {/* Interactive USD Bill Selector: Select dollars you have in drawer to see remaining riel */}
+                  {maxDollarBills > 0 && (
+                    <div className="space-y-1.5 pt-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-stone-700">
+                          💵 Have USD Dollar Bills? Tap amount:
+                        </span>
+                        <span className="text-[10px] font-bold text-stone-400">
+                          Max: ${maxDollarBills}.00
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFX.playBlip(880);
+                            setCustomUSDChange(0);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                            effectiveUSDGiven === 0
+                              ? "bg-emerald-700 text-white shadow-xs"
+                              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+                          }`}
+                        >
+                          $0 (All in Riel)
+                        </button>
+
+                        {[1, 2, 5, 10, 20, 50, 100]
+                          .filter((d) => d <= maxDollarBills)
+                          .map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => {
+                                soundFX.playBlip(900);
+                                setCustomUSDChange(d);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                effectiveUSDGiven === d
+                                  ? "bg-emerald-700 text-white shadow-xs"
+                                  : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+                              }`}
+                            >
+                              ${d}
+                            </button>
+                          ))}
+
+                        {maxDollarBills > 1 && ![1, 2, 5, 10, 20, 50, 100].includes(maxDollarBills) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundFX.playBlip(900);
+                              setCustomUSDChange(maxDollarBills);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                              effectiveUSDGiven === maxDollarBills
+                                ? "bg-emerald-700 text-white shadow-xs"
+                                : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+                            }`}
+                          >
+                            ${maxDollarBills} (Max)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-[10px] font-black text-rose-900 uppercase tracking-wider block">Remaining Balance</span>
-                  <span className="text-base font-black text-rose-600 block leading-none">{formatUSD(remainingUSD)}</span>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] font-black text-rose-900 uppercase tracking-wider block">Remaining Balance</span>
+                    <span className="text-base font-black text-rose-600 block leading-none">{formatUSD(remainingUSD)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-black text-rose-900 uppercase tracking-wider block">In Cambodian Riel</span>
+                    <span className="text-base font-black text-rose-600 block leading-none">{formatKHRDirect(roundKHR(remainingUSD * KHR_RATE))}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-black text-rose-900 uppercase tracking-wider block">In Cambodian Riel</span>
-                  <span className="text-base font-black text-rose-600 block leading-none">{formatKHRDirect(roundKHR(remainingUSD * KHR_RATE))}</span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Quick Fill */}
             <div className="space-y-1">
@@ -1778,7 +1834,7 @@ export default function PosRegisterPage() {
                   <button
                     type="button"
                     onClick={() => setCashInputUSD(totalUSD.toFixed(2))}
-                    className="h-8 rounded-xl bg-emerald-100 text-emerald-900 font-black text-xs"
+                    className="h-8 rounded-xl bg-emerald-100 text-emerald-900 font-black text-xs cursor-pointer"
                   >
                     Exact
                   </button>
@@ -1787,7 +1843,7 @@ export default function PosRegisterPage() {
                       key={d}
                       type="button"
                       onClick={() => setCashInputUSD(d)}
-                      className="h-8 rounded-xl bg-stone-100 text-stone-800 font-black text-xs"
+                      className="h-8 rounded-xl bg-stone-100 text-stone-800 font-black text-xs hover:bg-stone-200 cursor-pointer"
                     >
                       ${d}
                     </button>
@@ -1795,7 +1851,7 @@ export default function PosRegisterPage() {
                   <button
                     type="button"
                     onClick={() => setCashInputUSD("")}
-                    className="h-8 rounded-xl bg-rose-50 text-rose-700 font-black text-xs"
+                    className="h-8 rounded-xl bg-rose-50 text-rose-700 font-black text-xs hover:bg-rose-100 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -1805,24 +1861,24 @@ export default function PosRegisterPage() {
                   <button
                     type="button"
                     onClick={() => setCashInputKHR(String(totalKHR))}
-                    className="h-8 rounded-xl bg-emerald-100 text-emerald-900 font-black text-xs"
+                    className="h-8 rounded-xl bg-emerald-100 text-emerald-900 font-black text-xs cursor-pointer"
                   >
                     Exact
                   </button>
-                  {["2000", "5000", "10000", "20000", "50000", "100000"].map((d) => (
+                  {["1000", "2000", "5000", "10000", "20000", "50000"].map((d) => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setCashInputKHR(d)}
-                      className="h-8 rounded-xl bg-stone-100 text-stone-800 font-black text-xs"
+                      className="h-8 rounded-xl bg-stone-100 text-stone-800 font-black text-xs hover:bg-stone-200 cursor-pointer"
                     >
-                      {parseInt(d) >= 1000 ? `${parseInt(d) / 1000}k` : d} ៛
+                      {Number(d).toLocaleString("en-US")} ៛
                     </button>
                   ))}
                   <button
                     type="button"
                     onClick={() => setCashInputKHR("")}
-                    className="h-8 rounded-xl bg-rose-50 text-rose-700 font-black text-xs"
+                    className="h-8 rounded-xl bg-rose-50 text-rose-700 font-black text-xs hover:bg-rose-100 cursor-pointer"
                   >
                     Clear
                   </button>
