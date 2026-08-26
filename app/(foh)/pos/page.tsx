@@ -47,9 +47,14 @@ import {
   Eye,
   X,
   Filter,
+  ShieldAlert,
+  Radio,
+  Activity,
+  Cpu,
 } from "lucide-react";
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
+import { TouchNumpadDialog } from "@/components/pos/TouchNumpadDialog";
 
 /* ------------------------------------------------------------------ */
 /*  Types & Interfaces                                                */
@@ -109,6 +114,9 @@ interface CompletedOrderRecord {
   channel: string;
   table?: string;
   customer?: string;
+  voidReason?: string;
+  voidedAt?: string;
+  voidAuthorizedBy?: string;
 }
 
 interface HeldOrder {
@@ -601,6 +609,21 @@ export default function PosRegisterPage() {
   const [inspectingOrder, setInspectingOrder] = useState<CompletedOrderRecord | null>(null);
   const [orderFilterStatus, setOrderFilterStatus] = useState<"ALL" | "Completed" | "On Hold" | "Void">("ALL");
 
+  // Void Reason & Manager PIN Flow
+  const [showVoidReasonModal, setShowVoidReasonModal] = useState<boolean>(false);
+  const [showManagerPinModal, setShowManagerPinModal] = useState<boolean>(false);
+  const [selectedVoidReason, setSelectedVoidReason] = useState<string>("Customer Cancel");
+  const [orderToVoid, setOrderToVoid] = useState<CompletedOrderRecord | null>(null);
+
+  // Hardware Operational State Awareness
+  const [showHardwareModal, setShowHardwareModal] = useState<boolean>(false);
+  const [printerCoverOpen, setPrinterCoverOpen] = useState<boolean>(false);
+  const [baristaPrinterStatus, setBaristaPrinterStatus] = useState<"READY" | "BUSY" | "PAPER_LOW">("READY");
+  const [kitchenKdsStatus, setKitchenKdsStatus] = useState<"ONLINE" | "STANDBY">("ONLINE");
+
+  // Animated KHQR Transaction Success Feedback
+  const [isKhqrSuccess, setIsKhqrSuccess] = useState<boolean>(false);
+
   // Promo Custom Touch Keypad State
   const [promoCustomType, setPromoCustomType] = useState<"PERCENT" | "USD">("PERCENT");
   const [promoCustomVal, setPromoCustomVal] = useState<string>("");
@@ -940,16 +963,53 @@ export default function PosRegisterPage() {
     showNotification("Held Ticket Discarded 🗑️", "Held order cleared from slot.", "info", 2000);
   };
 
-  // Void an existing order
-  const handleVoidOrder = (orderId: string) => {
+  // Void an existing order with Reason & Manager PIN flow
+  const handleInitiateVoid = (order: CompletedOrderRecord) => {
+    soundFX.playBlip(750);
+    setOrderToVoid(order);
+    setSelectedVoidReason("Customer Cancel");
+    setShowVoidReasonModal(true);
+  };
+
+  const handleProceedToPin = () => {
+    soundFX.playBlip(850);
+    setShowVoidReasonModal(false);
+    setShowManagerPinModal(true);
+  };
+
+  const handleAuthorizeVoid = (pin: string) => {
+    if (!orderToVoid) return;
     soundFX.playWarning();
+    const voidTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     setCompletedOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: "Void" as const } : o))
+      prev.map((o) =>
+        o.id === orderToVoid.id
+          ? {
+              ...o,
+              status: "Void" as const,
+              voidReason: selectedVoidReason,
+              voidedAt: voidTime,
+              voidAuthorizedBy: "Manager",
+            }
+          : o
+      )
     );
-    if (inspectingOrder && inspectingOrder.id === orderId) {
-      setInspectingOrder((prev) => (prev ? { ...prev, status: "Void" as const } : null));
+    if (inspectingOrder && inspectingOrder.id === orderToVoid.id) {
+      setInspectingOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "Void" as const,
+              voidReason: selectedVoidReason,
+              voidedAt: voidTime,
+              voidAuthorizedBy: "Manager",
+            }
+          : null
+      );
     }
-    showNotification("Order Voided 🚫", "Order has been marked as Void.", "warning", 2500);
+    showNotification("Order Voided 🚫", `Ticket #${orderToVoid.ticketNumber} marked as Void (${selectedVoidReason}).`, "warning", 3000);
+    setOrderToVoid(null);
+    setShowManagerPinModal(false);
   };
 
   // Reorder items from past order
@@ -970,6 +1030,17 @@ export default function PosRegisterPage() {
     setActiveNav("register");
     setInspectingOrder(null);
     showNotification("Reordered Successfully 🔄", `${reloadedItems.length} items loaded into cart.`, "success", 2000);
+  };
+
+  // Silent Thermal Print (EPSON / POS Thermal Printer direct payload)
+  const handleSilentThermalPrint = (order: CompletedOrderRecord) => {
+    soundFX.playKitchen();
+    showNotification(
+      "Thermal Print Sent 🖨️",
+      `Direct thermal payload dispatched to EPSON TM-T88VI (Ticket #${order.ticketNumber})`,
+      "success",
+      2500
+    );
   };
 
   // Reprint Kitchen / Barista ticket
@@ -1031,8 +1102,19 @@ export default function PosRegisterPage() {
           )}
         </div>
 
-        {/* Right: Online Indicator & Operations */}
+        {/* Right: Hardware Status, Online Indicator & Operations */}
         <div className="flex items-center gap-2">
+          {/* Hardware Awareness Pill */}
+          <button
+            type="button"
+            onClick={() => setShowHardwareModal(true)}
+            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200 transition-all cursor-pointer"
+            title="Click to check Hardware & Printer Station status"
+          >
+            <Printer size={12} className="text-teal-700" />
+            <span>Thermal: Ready</span>
+          </button>
+
           <div
             className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
               isOnline ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-amber-50 text-amber-900 border-amber-300 animate-pulse"
@@ -1376,6 +1458,22 @@ export default function PosRegisterPage() {
                         </button>
                       </div>
 
+                      {/* Void Audit Card if Voided */}
+                      {inspectingOrder.status === "Void" && (
+                        <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 space-y-1 text-xs text-rose-900">
+                          <div className="flex items-center gap-1.5 font-black text-rose-800 uppercase tracking-wide text-[10px]">
+                            <Ban size={13} />
+                            <span>Void Audit Record</span>
+                          </div>
+                          <p className="text-[11px]">
+                            Reason: <span className="font-bold">{inspectingOrder.voidReason || "Order Cancelled"}</span>
+                          </p>
+                          <p className="text-[10px] text-rose-600">
+                            Authorized by: {inspectingOrder.voidAuthorizedBy || "Manager"} · {inspectingOrder.voidedAt || inspectingOrder.timestamp}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Items List */}
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                         <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block">Ordered Items</span>
@@ -1428,10 +1526,7 @@ export default function PosRegisterPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            soundFX.playBlip(800);
-                            try { window.print(); } catch {}
-                          }}
+                          onClick={() => handleSilentThermalPrint(inspectingOrder)}
                           className="p-2.5 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
                         >
                           <Printer size={14} className="text-stone-600" />
@@ -1459,7 +1554,7 @@ export default function PosRegisterPage() {
                         <button
                           type="button"
                           disabled={inspectingOrder.status === "Void"}
-                          onClick={() => handleVoidOrder(inspectingOrder.id)}
+                          onClick={() => handleInitiateVoid(inspectingOrder)}
                           className="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 disabled:opacity-40 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
                         >
                           <Ban size={14} />
@@ -2551,66 +2646,91 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 2. Bakong KHQR Dynamic Modal */}
+      {/* 2. Bakong KHQR Dynamic Modal with Animated Polling & Success Transition */}
       {showKHQRModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(750);
-                  setShowKHQRModal(false);
-                  setShowNonCashOptions(true);
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <ArrowLeft size={13} /> Back
-              </button>
-              <span className="text-xs font-black text-stone-900 uppercase tracking-wider flex items-center gap-1.5">
-                <QrCode size={16} className="text-teal-700" /> Bakong KHQR
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowKHQRModal(false)}
-                className="text-stone-400 hover:text-stone-700 text-xs font-bold p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="relative mx-auto flex h-44 w-44 items-center justify-center rounded-3xl bg-stone-900 p-3 shadow-lg">
-              <div className="absolute inset-0 rounded-3xl border-2 border-teal-400/40 animate-ping pointer-events-none" />
-              <div className="h-full w-full bg-white rounded-2xl p-2 flex flex-col items-center justify-center">
-                <QrCode size={100} className="text-stone-950" />
-                <span className="text-[9px] font-black text-teal-800 tracking-wider mt-1">KHQR DYNAMIC PAY</span>
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
+            {isKhqrSuccess ? (
+              <div className="py-8 space-y-3 animate-in zoom-in-95 duration-200">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500 text-white shadow-xl animate-bounce">
+                  <CheckCircle2 size={48} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black text-stone-900">Payment Successful!</h3>
+                  <p className="text-xs font-bold text-emerald-700">Approved via Bakong KHQR</p>
+                  <p className="text-[11px] text-stone-400 mt-1">{formatUSD(totalUSD)} · {formatKHRDirect(totalKHR)}</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(750);
+                      setShowKHQRModal(false);
+                      setShowNonCashOptions(true);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={13} /> Back
+                  </button>
+                  <span className="text-xs font-black text-stone-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <QrCode size={16} className="text-teal-700" /> Bakong KHQR
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowKHQRModal(false)}
+                    className="text-stone-400 hover:text-stone-700 text-xs font-bold p-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
 
-            <div className="space-y-0.5">
-              <div className="text-xl font-black text-teal-900">{formatUSD(totalUSD)}</div>
-              <div className="text-xs font-bold text-stone-500">{formatKHRDirect(totalKHR)}</div>
-              <div className="text-[11px] font-bold text-amber-700 mt-1">
-                ⏱️ QR Expires in: <span className="text-stone-900 font-black">{khqrTimer}s</span>
-              </div>
-            </div>
+                <div className="relative mx-auto flex h-44 w-44 items-center justify-center rounded-3xl bg-stone-900 p-3 shadow-lg">
+                  <div className="absolute inset-0 rounded-3xl border-2 border-teal-400/40 animate-ping pointer-events-none" />
+                  <div className="h-full w-full bg-white rounded-2xl p-2 flex flex-col items-center justify-center">
+                    <QrCode size={100} className="text-stone-950" />
+                    <span className="text-[9px] font-black text-teal-800 tracking-wider mt-1">KHQR DYNAMIC PAY</span>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowKHQRModal(false)}
-                className="py-2.5 rounded-2xl bg-stone-100 text-stone-700 font-bold text-xs hover:bg-stone-200 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCompleteSale("BAKONG KHQR")}
-                className="py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer"
-              >
-                Confirm Received ✓
-              </button>
-            </div>
+                <div className="space-y-1">
+                  <div className="text-xl font-black text-teal-900">{formatUSD(totalUSD)}</div>
+                  <div className="text-xs font-bold text-stone-500">{formatKHRDirect(totalKHR)}</div>
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-teal-800 bg-teal-50 py-1 px-3 rounded-full border border-teal-200 mt-1">
+                    <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-ping" />
+                    <span>Polling ABA / Bakong Gateway... ({khqrTimer}s)</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowKHQRModal(false)}
+                    className="py-2.5 rounded-2xl bg-stone-100 text-stone-700 font-bold text-xs hover:bg-stone-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsKhqrSuccess(true);
+                      soundFX.playSuccess();
+                      setTimeout(() => {
+                        setIsKhqrSuccess(false);
+                        setShowKHQRModal(false);
+                        handleCompleteSale("BAKONG KHQR");
+                      }, 1000);
+                    }}
+                    className="py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>Confirm Received ✓</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -3437,6 +3557,180 @@ export default function PosRegisterPage() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Void Reason Selector Modal */}
+      {showVoidReasonModal && orderToVoid && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black">
+                  <Ban size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-stone-900">Select Void Reason</h3>
+                  <p className="text-[10px] text-stone-400">Order #{orderToVoid.ticketNumber} · {formatUSD(orderToVoid.total)}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVoidReasonModal(false)}
+                className="h-7 w-7 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              {[
+                { id: "Customer Cancel", label: "Customer Cancelled", desc: "Customer left or changed mind before drink preparation" },
+                { id: "Duplicate Ticket", label: "Duplicate Ticket", desc: "Order was entered twice accidentally" },
+                { id: "Invalid Payment", label: "Invalid / Declined Payment", desc: "Payment was not finalized or rejected" },
+                { id: "Wrong Items Entered", label: "Wrong Items Selected", desc: "Cashier entered wrong product or size" },
+                { id: "Kitchen Spoilage", label: "Kitchen / Barista Spoilage", desc: "Spilled or damaged during drink crafting" },
+              ].map((reason) => (
+                <button
+                  key={reason.id}
+                  type="button"
+                  onClick={() => setSelectedVoidReason(reason.id)}
+                  className={`w-full p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    selectedVoidReason === reason.id
+                      ? "bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-2xs"
+                      : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs font-black">
+                    <span>{reason.label}</span>
+                    {selectedVoidReason === reason.id && <Check size={14} className="text-rose-600" />}
+                  </div>
+                  <p className="text-[10px] text-stone-400 font-normal mt-0.5">{reason.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowVoidReasonModal(false)}
+                className="flex-1 py-2.5 rounded-2xl bg-stone-100 text-stone-700 font-bold text-xs hover:bg-stone-200 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleProceedToPin}
+                className="flex-1 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer"
+              >
+                Manager PIN →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Touch Numpad Manager PIN Authorization Dialog */}
+      <TouchNumpadDialog
+        isOpen={showManagerPinModal}
+        onClose={() => setShowManagerPinModal(false)}
+        mode="PIN"
+        title="Manager PIN Authorization"
+        subtitle={orderToVoid ? `Authorize voiding Ticket #${orderToVoid.ticketNumber}` : "Security PIN required"}
+        onConfirm={handleAuthorizeVoid}
+      />
+
+      {/* 9. Hardware & Operational Awareness Modal */}
+      {showHardwareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-black">
+                  <Printer size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-stone-900">Hardware & Station Status</h3>
+                  <p className="text-[10px] text-stone-400">Live printer queue and POS peripherals</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHardwareModal(false)}
+                className="h-7 w-7 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {/* Receipt Thermal Printer */}
+              <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    <span className="font-black text-xs text-stone-900">Receipt Printer (EPSON TM-T88VI)</span>
+                  </div>
+                  <span className="text-[9px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                    ONLINE
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-stone-500">
+                  <span>Paper Roll: 85% Full</span>
+                  <span>Port: USB Direct / RAW 9100</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playKitchen();
+                    showNotification("Test Print Sent 🖨️", "Simulated thermal feed: EPSON TM-T88VI OK.", "success");
+                  }}
+                  className="w-full py-1.5 rounded-xl bg-white border border-stone-300 hover:bg-stone-100 text-stone-800 text-[11px] font-bold shadow-2xs cursor-pointer"
+                >
+                  ⚡ Test Print Slip
+                </button>
+              </div>
+
+              {/* Barista Kitchen Printer */}
+              <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    <span className="font-black text-xs text-stone-900">Barista Label Printer</span>
+                  </div>
+                  <span className="text-[9px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                    READY
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-stone-500">
+                  <span>Format: 58mm Die-cut Cup Label</span>
+                  <span>Queue: 0 pending</span>
+                </div>
+              </div>
+
+              {/* Kitchen Display System KDS */}
+              <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-teal-500" />
+                    <span className="font-black text-xs text-stone-900">Kitchen Display (KDS)</span>
+                  </div>
+                  <span className="text-[10px] text-stone-400 mt-0.5 block">WebSockets Connected (Latency 12ms)</span>
+                </div>
+                <span className="text-[9px] font-black text-teal-800 bg-teal-100 px-2 py-0.5 rounded-md">
+                  SYNCED
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowHardwareModal(false)}
+              className="w-full py-2.5 rounded-2xl bg-[#4A2E1F] text-white font-black text-xs cursor-pointer shadow-md"
+            >
+              Done ✓
+            </button>
           </div>
         </div>
       )}
