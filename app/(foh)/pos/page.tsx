@@ -40,6 +40,13 @@ import {
   ArrowLeft,
   Ticket,
   Percent,
+  RotateCcw,
+  Ban,
+  FileText,
+  Check,
+  Eye,
+  X,
+  Filter,
 } from "lucide-react";
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
@@ -89,6 +96,7 @@ interface CompletedOrderRecord {
   timestamp: string;
   items: { name: string; qty: number; unitPrice: number; total: number; modifiers?: string }[];
   subtotal: number;
+  discountUSD?: number;
   tax: number;
   total: number;
   paymentMethod: string;
@@ -97,7 +105,7 @@ interface CompletedOrderRecord {
   totalReceivedUSD: number;
   changeUSD: number;
   changeKHR: number;
-  status: "Completed";
+  status: "Completed" | "Void" | "On Hold";
   channel: string;
   table?: string;
   customer?: string;
@@ -589,6 +597,14 @@ export default function PosRegisterPage() {
   const [showCashierModal, setShowCashierModal] = useState<boolean>(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<CompletedOrderRecord | null>(null);
 
+  // Orders Ledger & Inspection Drawer State
+  const [inspectingOrder, setInspectingOrder] = useState<CompletedOrderRecord | null>(null);
+  const [orderFilterStatus, setOrderFilterStatus] = useState<"ALL" | "Completed" | "On Hold" | "Void">("ALL");
+
+  // Promo Custom Touch Keypad State
+  const [promoCustomType, setPromoCustomType] = useState<"PERCENT" | "USD">("PERCENT");
+  const [promoCustomVal, setPromoCustomVal] = useState<string>("");
+
   // Cash Modal State
   const [activeCashField, setActiveCashField] = useState<"USD" | "KHR">("KHR");
   const [cashInputUSD, setCashInputUSD] = useState<string>("");
@@ -924,6 +940,47 @@ export default function PosRegisterPage() {
     showNotification("Held Ticket Discarded 🗑️", "Held order cleared from slot.", "info", 2000);
   };
 
+  // Void an existing order
+  const handleVoidOrder = (orderId: string) => {
+    soundFX.playWarning();
+    setCompletedOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: "Void" as const } : o))
+    );
+    if (inspectingOrder && inspectingOrder.id === orderId) {
+      setInspectingOrder((prev) => (prev ? { ...prev, status: "Void" as const } : null));
+    }
+    showNotification("Order Voided 🚫", "Order has been marked as Void.", "warning", 2500);
+  };
+
+  // Reorder items from past order
+  const handleReorder = (order: CompletedOrderRecord) => {
+    soundFX.playSuccess();
+    const reloadedItems: CartItem[] = order.items.map((i, idx) => ({
+      cartId: `reorder-${Date.now()}-${idx}`,
+      productId: `prod-${i.name.toLowerCase().replace(/\s+/g, "-")}`,
+      name: i.name,
+      category: "espresso",
+      price: i.unitPrice,
+      basePrice: i.unitPrice,
+      qty: i.qty,
+      notes: i.modifiers,
+    }));
+    dispatch({ type: "SET_CART", items: reloadedItems });
+    setIsResumedOrder(false);
+    setActiveNav("register");
+    setInspectingOrder(null);
+    showNotification("Reordered Successfully 🔄", `${reloadedItems.length} items loaded into cart.`, "success", 2000);
+  };
+
+  // Reprint Kitchen / Barista ticket
+  const handleReprintLabel = (order: CompletedOrderRecord) => {
+    soundFX.playKitchen();
+    showNotification("Label / Ticket Printed 🏷️", `Kitchen ticket #${order.ticketNumber} reprinted.`, "info", 2000);
+    try {
+      window.print();
+    } catch {}
+  };
+
   // Category-Aware Modifier Determination
   const activeIsBeverage = activeItem && (activeItem.category === "espresso" || activeItem.category === "tea" || activeItem.category === "frappe");
   const activeIsPastry = activeItem && activeItem.category === "pastries";
@@ -1119,84 +1176,297 @@ export default function PosRegisterPage() {
               </>
             )}
 
-            {/* Orders / History Tab */}
+            {/* Orders / History Tab: Dedicated Full-View Table & Inspection Drawer */}
             {activeNav === "orders" && (
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
-                {/* Single Held Order Card if active */}
-                {hasHeldOrder && singleHeldOrder && (
-                  <div className="p-4 rounded-3xl bg-amber-50/90 border-2 border-amber-300 shadow-xs space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-2.5 w-2.5 rounded-full bg-amber-500 animate-ping" />
-                        <span className="font-black text-xs text-amber-950 uppercase tracking-wide">
-                          Currently Held Ticket #{singleHeldOrder.ticketNumber}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
-                        {singleHeldOrder.savedAt ? new Date(singleHeldOrder.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now"}
-                      </span>
+              <div className="flex-1 flex overflow-hidden min-h-0 bg-stone-50/50">
+                {/* Main Table Area */}
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden p-4 sm:p-6 space-y-4">
+                  {/* Top Bar: Stats & Filter Tabs */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 pb-3">
+                    <div>
+                      <h2 className="text-base font-black text-stone-900 tracking-tight flex items-center gap-2">
+                        <ClipboardList size={18} className="text-[#4A2E1F]" /> Orders & Sales Ledger
+                      </h2>
+                      <p className="text-xs text-stone-400">Enterprise audit table of completed, held, and voided tickets</p>
                     </div>
 
-                    <p className="text-xs text-stone-700">
-                      {singleHeldOrder.cart.map((i) => `${i.qty}x ${i.name}`).join(", ")}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {/* Filter Chips */}
+                      <div className="flex rounded-xl bg-stone-200/70 p-0.5 border border-stone-200 text-xs font-bold">
+                        {(["ALL", "Completed", "On Hold", "Void"] as const).map((st) => (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() => setOrderFilterStatus(st)}
+                            className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                              orderFilterStatus === st
+                                ? "bg-white text-stone-900 shadow-2xs font-black"
+                                : "text-stone-500 hover:text-stone-800"
+                            }`}
+                          >
+                            {st}
+                          </button>
+                        ))}
+                      </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-amber-200">
-                      <span className="text-xs font-black text-amber-900">
-                        {formatUSD(singleHeldOrder.cart.reduce((s, i) => s + i.price * i.qty, 0))} ({formatKHRDirect(roundKHR(singleHeldOrder.cart.reduce((s, i) => s + i.price * i.qty, 0) * KHR_RATE))})
+                      <span className="text-xs font-black text-stone-700 bg-stone-100 px-3 py-1.5 rounded-xl border border-stone-200">
+                        Total: {completedOrders.length + (hasHeldOrder ? 1 : 0)}
                       </span>
-                      <div className="flex gap-2">
+                    </div>
+                  </div>
+
+                  {/* Single Held Order Banner if active */}
+                  {hasHeldOrder && singleHeldOrder && (orderFilterStatus === "ALL" || orderFilterStatus === "On Hold") && (
+                    <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 shadow-xs flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-ping" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-xs text-amber-950 uppercase tracking-wide">
+                              Currently Held Ticket #{singleHeldOrder.ticketNumber}
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-md">
+                              ON HOLD
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-stone-600 mt-0.5">
+                            {singleHeldOrder.cart.map((i) => `${i.qty}x ${i.name}`).join(", ")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-black text-amber-900">
+                          {formatUSD(singleHeldOrder.cart.reduce((s, i) => s + i.price * i.qty, 0))}
+                        </span>
                         <button
                           type="button"
                           onClick={handleDiscardHeldOrder}
-                          className="px-3 py-1 rounded-xl bg-white border border-rose-200 text-rose-700 font-bold text-xs hover:bg-rose-50 cursor-pointer"
+                          className="px-2.5 py-1 rounded-xl bg-white border border-rose-200 text-rose-700 font-bold text-xs hover:bg-rose-50 cursor-pointer"
                         >
                           Discard
                         </button>
                         <button
                           type="button"
                           onClick={handleResumeWithMerge}
-                          className="px-4 py-1 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          className="px-3.5 py-1 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
                         >
                           <PlayCircle size={13} />
-                          <span>Resume Order</span>
+                          <span>Resume</span>
                         </button>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-                  <div>
-                    <h2 className="text-base font-black text-stone-900">Completed Orders History</h2>
-                    <p className="text-xs text-stone-400">Synced cloud and offline sales records</p>
+                  {/* Dedicated Full-View Table */}
+                  <div className="flex-1 overflow-auto bg-white rounded-2xl border border-stone-200 shadow-xs">
+                    {completedOrders.filter((o) => orderFilterStatus === "ALL" || o.status === orderFilterStatus).length === 0 &&
+                    !(hasHeldOrder && (orderFilterStatus === "ALL" || orderFilterStatus === "On Hold")) ? (
+                      <div className="py-24 text-center text-stone-400 text-xs">
+                        No orders match the selected filter.
+                      </div>
+                    ) : (
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-stone-100 text-stone-600 font-black text-[10px] uppercase tracking-wider sticky top-0 z-10 border-b border-stone-200">
+                          <tr>
+                            <th className="py-2.5 px-3">Ticket #</th>
+                            <th className="py-2.5 px-3">Time & Channel</th>
+                            <th className="py-2.5 px-3">Items Breakdown</th>
+                            <th className="py-2.5 px-3">Total Due</th>
+                            <th className="py-2.5 px-3">Payment</th>
+                            <th className="py-2.5 px-3">Status</th>
+                            <th className="py-2.5 px-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {completedOrders
+                            .filter((o) => orderFilterStatus === "ALL" || o.status === orderFilterStatus)
+                            .map((ord) => {
+                              const isSelected = inspectingOrder?.id === ord.id;
+                              return (
+                                <tr
+                                  key={ord.id}
+                                  onClick={() => setInspectingOrder(ord)}
+                                  className={`hover:bg-amber-50/50 cursor-pointer transition-colors ${
+                                    isSelected ? "bg-amber-100/60 font-medium" : ""
+                                  }`}
+                                >
+                                  <td className="py-3 px-3 font-black text-stone-900">
+                                    <span className="bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200 text-stone-800">
+                                      #{ord.ticketNumber}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 text-stone-600">
+                                    <div className="font-bold text-stone-800">{ord.timestamp}</div>
+                                    <div className="text-[10px] text-stone-400">{ord.channel}{ord.table ? ` · ${ord.table}` : ""}</div>
+                                  </td>
+                                  <td className="py-3 px-3 text-stone-700 max-w-xs truncate">
+                                    {ord.items.map((i) => `${i.qty}x ${i.name}`).join(", ")}
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    <div className="font-black text-stone-900">{formatUSD(ord.total)}</div>
+                                    <div className="text-[10px] text-stone-400">{formatKHRDirect(roundKHR(ord.total * KHR_RATE))}</div>
+                                  </td>
+                                  <td className="py-3 px-3 font-bold uppercase text-[10px] text-stone-700">
+                                    {ord.paymentMethod}
+                                  </td>
+                                  <td className="py-3 px-3">
+                                    <span
+                                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase inline-block ${
+                                        ord.status === "Void"
+                                          ? "bg-rose-100 text-rose-800 border border-rose-200"
+                                          : ord.status === "On Hold"
+                                          ? "bg-amber-100 text-amber-900 border border-amber-200"
+                                          : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      }`}
+                                    >
+                                      {ord.status || "Completed"}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setInspectingOrder(ord);
+                                      }}
+                                      className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-[10px] flex items-center gap-1 ml-auto cursor-pointer"
+                                    >
+                                      <Eye size={12} /> Inspect
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
-                  <span className="text-xs font-black text-stone-700 bg-stone-100 px-3 py-1 rounded-full">
-                    {completedOrders.length} Orders
-                  </span>
                 </div>
 
-                {completedOrders.length === 0 ? (
-                  <div className="py-20 text-center text-stone-400 text-xs">No orders completed today yet.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {completedOrders.map((ord) => (
-                      <div key={ord.id} className="p-3.5 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <span className="font-black text-xs text-stone-900">Ticket #{ord.ticketNumber}</span>
-                          <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            {formatUSD(ord.total)} ({formatKHRDirect(roundKHR(ord.total * KHR_RATE))})
-                          </span>
+                {/* Right-Hand Inspection Drawer */}
+                {inspectingOrder && (
+                  <div className="w-80 sm:w-96 border-l border-stone-200 bg-white p-5 flex flex-col justify-between shadow-lg overflow-y-auto animate-in slide-in-from-right duration-200 z-20 shrink-0">
+                    <div className="space-y-4">
+                      {/* Drawer Header */}
+                      <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm text-stone-900">Ticket #{inspectingOrder.ticketNumber}</span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                inspectingOrder.status === "Void"
+                                  ? "bg-rose-100 text-rose-800"
+                                  : "bg-emerald-100 text-emerald-800"
+                              }`}
+                            >
+                              {inspectingOrder.status || "Completed"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-stone-400 mt-0.5">
+                            {inspectingOrder.timestamp} · {inspectingOrder.channel}{inspectingOrder.table ? ` (${inspectingOrder.table})` : ""}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-stone-600 line-clamp-2">
-                          {ord.items.map((i) => `${i.qty}x ${i.name} (${i.modifiers || "Regular"})`).join(", ")}
-                        </p>
-                        <div className="flex justify-between text-[10px] text-stone-400 pt-1.5 border-t border-stone-100">
-                          <span>{ord.timestamp} · {ord.channel}</span>
-                          <span className="font-black uppercase text-stone-800">{ord.paymentMethod}</span>
+                        <button
+                          type="button"
+                          onClick={() => setInspectingOrder(null)}
+                          className="h-7 w-7 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Items List */}
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block">Ordered Items</span>
+                        {inspectingOrder.items.map((item, idx) => (
+                          <div key={idx} className="p-2.5 rounded-xl bg-stone-50 border border-stone-200/80 flex justify-between items-start text-xs">
+                            <div>
+                              <span className="font-black text-stone-900">{item.qty}x {item.name}</span>
+                              {item.modifiers && (
+                                <p className="text-[10px] text-stone-400 mt-0.5">{item.modifiers}</p>
+                              )}
+                            </div>
+                            <span className="font-black text-stone-900">{formatUSD(item.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Financial Breakdown Card */}
+                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 space-y-1.5 text-xs">
+                        <div className="flex justify-between text-stone-500">
+                          <span>Subtotal</span>
+                          <span className="font-bold">{formatUSD(inspectingOrder.subtotal)}</span>
+                        </div>
+                        {inspectingOrder.discountUSD && inspectingOrder.discountUSD > 0 && (
+                          <div className="flex justify-between text-amber-700">
+                            <span>Discount</span>
+                            <span className="font-bold">-{formatUSD(inspectingOrder.discountUSD)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-stone-500">
+                          <span>Tax (10%)</span>
+                          <span className="font-bold">{formatUSD(inspectingOrder.tax)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-black text-stone-900 border-t border-stone-200 pt-1.5 mt-1">
+                          <span>Total Due</span>
+                          <div className="text-right">
+                            <div>{formatUSD(inspectingOrder.total)}</div>
+                            <div className="text-[10px] font-bold text-amber-900">{formatKHRDirect(roundKHR(inspectingOrder.total * KHR_RATE))}</div>
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-stone-400 border-t border-stone-100 pt-1 mt-1">
+                          <span>Paid with {inspectingOrder.paymentMethod}</span>
+                          {inspectingOrder.changeUSD > 0 && <span>Change: {formatUSD(inspectingOrder.changeUSD)}</span>}
                         </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* 1-Tap Utility Actions (2x2 Grid) */}
+                    <div className="space-y-2 pt-4 border-t border-stone-100">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 block">Quick Utilities</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundFX.playBlip(800);
+                            try { window.print(); } catch {}
+                          }}
+                          className="p-2.5 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Printer size={14} className="text-stone-600" />
+                          <span>Print Receipt</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleReorder(inspectingOrder)}
+                          className="p-2.5 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <RotateCcw size={14} />
+                          <span>Reorder</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleReprintLabel(inspectingOrder)}
+                          className="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Send size={14} className="text-teal-700" />
+                          <span>Reprint Label</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={inspectingOrder.status === "Void"}
+                          onClick={() => handleVoidOrder(inspectingOrder.id)}
+                          className="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 disabled:opacity-40 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Ban size={14} />
+                          <span>Void Order</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2455,39 +2725,148 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 4. Promo Modal */}
+      {/* 4. Promo Modal (100% Touch-Optimized with On-Screen Numpad & Quick Chips) */}
       {showPromoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-              <span className="text-xs font-black text-stone-900 flex items-center gap-1.5">
+              <span className="text-xs font-black text-stone-900 flex items-center gap-1.5 uppercase tracking-wider">
                 <Tag size={15} className="text-amber-700" /> Apply Discount Promo
               </span>
-              <button type="button" onClick={() => setShowPromoModal(false)} className="text-stone-400 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPromoModal(false);
+                  setPromoCustomVal("");
+                }}
+                className="h-7 w-7 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-xs font-bold cursor-pointer"
+              >
                 ✕
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "10% Off", val: rawSubtotal * 0.1 },
-                { label: "20% Off", val: rawSubtotal * 0.2 },
-                { label: "$1.00 Off", val: 1.0 },
-                { label: "$2.00 Off", val: 2.0 },
-              ].map((p) => (
+            {/* Quick-Select Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider">Quick Select Preset</span>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { label: "10%", val: rawSubtotal * 0.1 },
+                  { label: "20%", val: rawSubtotal * 0.2 },
+                  { label: "$1.00", val: 1.0 },
+                  { label: "$2.00", val: 2.0 },
+                ].map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(900);
+                      setDiscountUSD(Math.min(rawSubtotal, p.val));
+                      setShowPromoModal(false);
+                      setPromoCustomVal("");
+                      showNotification("Discount Applied! 🏷️", `${p.label} discount applied.`, "success");
+                    }}
+                    className="p-2 rounded-xl bg-stone-50 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 font-black text-xs text-stone-800 text-center transition-all cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Discount Input Box & Mode Toggle */}
+            <div className="space-y-2 pt-1 border-t border-stone-100">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider">Custom Discount</span>
+                <div className="flex bg-stone-100 p-0.5 rounded-lg border border-stone-200 text-[10px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setPromoCustomType("PERCENT")}
+                    className={`px-2 py-0.5 rounded-md cursor-pointer ${
+                      promoCustomType === "PERCENT" ? "bg-white text-stone-900 font-black shadow-2xs" : "text-stone-500"
+                    }`}
+                  >
+                    % Percent
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPromoCustomType("USD")}
+                    className={`px-2 py-0.5 rounded-md cursor-pointer ${
+                      promoCustomType === "USD" ? "bg-white text-stone-900 font-black shadow-2xs" : "text-stone-500"
+                    }`}
+                  >
+                    $ Dollar
+                  </button>
+                </div>
+              </div>
+
+              {/* High Contrast Display */}
+              <div className="h-11 px-3.5 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between">
+                <span className="text-lg font-black text-stone-900">
+                  {promoCustomVal ? (promoCustomType === "PERCENT" ? `${promoCustomVal} %` : `$ ${promoCustomVal}`) : (promoCustomType === "PERCENT" ? "0 %" : "$ 0.00")}
+                </span>
+                <span className="text-xs font-bold text-amber-800">
+                  {promoCustomVal ? `-${formatUSD(promoCustomType === "PERCENT" ? rawSubtotal * ((parseFloat(promoCustomVal) || 0) / 100) : Math.min(rawSubtotal, parseFloat(promoCustomVal) || 0))}` : "$0.00"}
+                </span>
+              </div>
+
+              {/* On-Screen Touch Numpad */}
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(900);
+                      setPromoCustomVal((prev) => prev + String(n));
+                    }}
+                    className="h-10 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-sm font-black text-stone-900 cursor-pointer"
+                  >
+                    {n}
+                  </button>
+                ))}
                 <button
-                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(600);
+                    setPromoCustomVal("");
+                  }}
+                  className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black border border-rose-200 cursor-pointer"
+                >
+                  C
+                </button>
+                <button
                   type="button"
                   onClick={() => {
                     soundFX.playBlip(900);
-                    setDiscountUSD(Math.min(rawSubtotal, p.val));
-                    setShowPromoModal(false);
+                    if (promoCustomType === "USD" && !promoCustomVal.includes(".")) {
+                      setPromoCustomVal((prev) => prev + ".");
+                    } else if (promoCustomVal) {
+                      setPromoCustomVal((prev) => prev + "0");
+                    }
                   }}
-                  className="p-3 rounded-2xl bg-stone-50 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 font-black text-xs text-stone-800 text-center transition-all cursor-pointer"
+                  className="h-10 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-sm font-black text-stone-900 cursor-pointer"
                 >
-                  {p.label}
+                  {promoCustomType === "USD" ? "." : "0"}
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const parsed = parseFloat(promoCustomVal) || 0;
+                    if (parsed <= 0) return;
+                    soundFX.playSuccess();
+                    const discount = promoCustomType === "PERCENT"
+                      ? rawSubtotal * (parsed / 100)
+                      : Math.min(rawSubtotal, parsed);
+                    setDiscountUSD(discount);
+                    setShowPromoModal(false);
+                    setPromoCustomVal("");
+                    showNotification("Custom Discount Set ✓", `${formatUSD(discount)} discount applied.`, "success");
+                  }}
+                  className="h-10 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white text-xs font-black cursor-pointer"
+                >
+                  Set ✓
+                </button>
+              </div>
             </div>
 
             {discountUSD > 0 && (
@@ -2497,49 +2876,85 @@ export default function PosRegisterPage() {
                   soundFX.playBlip(600);
                   setDiscountUSD(0);
                   setShowPromoModal(false);
+                  setPromoCustomVal("");
                 }}
-                className="w-full py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black hover:bg-rose-100 transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black hover:bg-rose-100 transition-colors cursor-pointer"
               >
-                Remove Discount
+                Remove Applied Discount
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* 4b. Coupon Modal */}
+      {/* 4b. Coupon Modal (100% Touch-Optimized with Quick Select Voucher Cards & Touch Code Presets) */}
       {showCouponModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
               <span className="text-xs font-black text-stone-900 flex items-center gap-1.5 uppercase tracking-wider">
-                <Ticket size={16} className="text-amber-700" /> Redeem Coupon
+                <Ticket size={16} className="text-amber-700" /> Redeem Voucher Coupon
               </span>
               <button
                 type="button"
                 onClick={() => {
                   setShowCouponModal(false);
                   setCouponError(null);
+                  setCouponCode("");
                 }}
-                className="text-stone-400 hover:text-stone-700 text-xs font-bold p-1 cursor-pointer"
+                className="h-7 w-7 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-xs font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-stone-600 block">Enter Coupon / Voucher Code</label>
+            {/* Quick Available Coupons Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider">Touch-Select Coupon</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { code: "WELCOME10", label: "Welcome 10% Off", disc: rawSubtotal * 0.1 },
+                  { code: "VIP20", label: "VIP Club 20% Off", disc: rawSubtotal * 0.2 },
+                  { code: "SUMMER20", label: "Summer 20% Off", disc: rawSubtotal * 0.2 },
+                  { code: "SAVE1", label: "$1.00 Voucher", disc: 1.0 },
+                  { code: "SAVE2", label: "$2.00 Voucher", disc: 2.0 },
+                  { code: "FREEDRINK", label: "$3.50 Free Item", disc: Math.min(rawSubtotal, 3.5) },
+                ].map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => {
+                      soundFX.playSuccess();
+                      setDiscountUSD(Math.min(rawSubtotal, c.disc));
+                      showNotification(`Coupon Applied (${c.code})! 🎟️`, `${c.label} applied to order.`, "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
+                    }}
+                    className="p-2.5 rounded-xl bg-stone-50 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 text-left transition-all cursor-pointer active:scale-95"
+                  >
+                    <div className="text-xs font-black text-stone-900">{c.code}</div>
+                    <div className="text-[10px] font-medium text-stone-500">{c.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Voucher Code Display & Touch Clear */}
+            <div className="space-y-2 pt-1 border-t border-stone-100">
+              <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider">Enter Code via Keypad</span>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => {
-                    setCouponCode(e.target.value.toUpperCase());
-                    setCouponError(null);
-                  }}
-                  placeholder="e.g. WELCOME10, VIP20"
-                  className="flex-1 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200 text-sm font-bold text-stone-900 uppercase focus:outline-none focus:ring-2 focus:ring-amber-800/30"
-                />
+                <div className="flex-1 h-10 px-3 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between text-sm font-black text-stone-900">
+                  <span>{couponCode || "SELECT OR ENTER CODE"}</span>
+                  {couponCode && (
+                    <button
+                      type="button"
+                      onClick={() => setCouponCode("")}
+                      className="text-stone-400 hover:text-stone-700 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -2566,46 +2981,22 @@ export default function PosRegisterPage() {
                       showNotification("Coupon Applied! 🎁", "$2.00 Voucher Discount applied.", "success");
                       setShowCouponModal(false);
                       setCouponCode("");
+                    } else if (code === "FREEDRINK") {
+                      setDiscountUSD(Math.min(rawSubtotal, 3.5));
+                      showNotification("Free Item Applied! 🎁", "$3.50 Drink Voucher applied.", "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
                     } else {
                       soundFX.playWarning();
                       setCouponError("Invalid or expired coupon code");
                     }
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs uppercase transition-all shadow-2xs cursor-pointer"
+                  className="px-4 h-10 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs uppercase cursor-pointer"
                 >
                   Apply
                 </button>
               </div>
               {couponError && <p className="text-[11px] font-bold text-rose-600">{couponError}</p>}
-            </div>
-
-            {/* Quick Available Coupons */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider">Quick Select Coupons</span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { code: "WELCOME10", label: "Welcome 10% Off", disc: rawSubtotal * 0.1 },
-                  { code: "VIP20", label: "VIP Club 20% Off", disc: rawSubtotal * 0.2 },
-                  { code: "SAVE1", label: "$1.00 Voucher", disc: 1.0 },
-                  { code: "SAVE2", label: "$2.00 Voucher", disc: 2.0 },
-                ].map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip(900);
-                      setDiscountUSD(Math.min(rawSubtotal, c.disc));
-                      showNotification(`Coupon Applied (${c.code})! 🎟️`, `${c.label} applied to order.`, "success");
-                      setShowCouponModal(false);
-                      setCouponCode("");
-                    }}
-                    className="p-2.5 rounded-xl bg-stone-50 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 text-left transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-black text-stone-900">{c.code}</div>
-                    <div className="text-[10px] font-medium text-stone-500">{c.label}</div>
-                  </button>
-                ))}
-              </div>
             </div>
 
             {discountUSD > 0 && (
@@ -2617,7 +3008,7 @@ export default function PosRegisterPage() {
                   setShowCouponModal(false);
                   setCouponCode("");
                 }}
-                className="w-full py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-black text-xs hover:bg-rose-100 transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-black text-xs hover:bg-rose-100 transition-colors cursor-pointer"
               >
                 Remove Applied Coupon
               </button>
