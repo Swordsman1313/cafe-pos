@@ -1135,10 +1135,10 @@ export default function PosRegisterPage() {
         </div>
       </header>
 
-      {/* ── Main Split: Left Workspace + Right Full-Height Cart ──────── */}
+      {/* ── Main Split: Left Workspace + Right Full-Height Cart (Cart shown only in Sales mode) ──────── */}
       <div className="flex flex-1 min-h-0 w-full overflow-hidden">
-        {/* ── LEFT WORKSPACE (Catalog + Modifier Drawer + Bottom Nav strictly confined to left!) ── */}
-        <div className="flex min-w-0 flex-1 flex-col h-full overflow-hidden border-r border-stone-200/80">
+        {/* ── MAIN WORKSPACE ── */}
+        <div className={`flex min-w-0 flex-1 flex-col h-full overflow-hidden ${activeNav === "register" ? "border-r border-stone-200/80" : ""}`}>
           {/* Main Catalog View / Active Tab Content */}
           <main className="flex min-w-0 flex-1 flex-col overflow-hidden" style={{ background: "#FDFBF9" }}>
             {activeNav === "register" && (
@@ -1428,7 +1428,7 @@ export default function PosRegisterPage() {
 
                 {/* Right-Hand Inspection Drawer */}
                 {inspectingOrder && (
-                  <div className="w-80 sm:w-96 border-l border-stone-200 bg-white p-5 flex flex-col justify-between shadow-lg overflow-y-auto animate-in slide-in-from-right duration-200 z-20 shrink-0">
+                  <div className="w-full md:w-[380px] lg:w-[420px] border-l border-stone-200 bg-white p-5 flex flex-col justify-between shadow-lg overflow-y-auto animate-in slide-in-from-right duration-200 z-20 shrink-0">
                     <div className="space-y-4">
                       {/* Drawer Header */}
                       <div className="flex items-center justify-between border-b border-stone-100 pb-3">
@@ -1903,8 +1903,9 @@ export default function PosRegisterPage() {
           </nav>
         </div>
 
-        {/* ── RIGHT CART SIDEBAR (Extends full-height from topbar to the absolute bottom of the screen!) ── */}
-        <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white shadow-lg z-30 overflow-hidden">
+        {/* ── RIGHT CART SIDEBAR (Visible ONLY in Sales / Register Mode) ── */}
+        {activeNav === "register" && (
+          <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white shadow-lg z-30 overflow-hidden">
           {/* Header & Order Channel Selector */}
           <div className="shrink-0 px-4 py-2 border-b border-stone-100 space-y-1.5 bg-stone-50/50">
             <div className="flex items-center justify-between">
@@ -2327,6 +2328,7 @@ export default function PosRegisterPage() {
             )}
           </div>
         </aside>
+        )}
       </div>
 
       {/* ── MODALS ── */}
