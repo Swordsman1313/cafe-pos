@@ -385,6 +385,40 @@ export default function PosRegisterPage() {
     offlineStorage.saveCart(cart);
   }, [cart]);
 
+  // Quantity Long-Press (Hold 400ms) vs Direct Tap (+1)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = useRef<boolean>(false);
+
+  const handleQtyTouchStart = (item: CartItem) => {
+    isLongPressRef.current = false;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      soundFX.playBlip(850);
+      setActiveCartId(item.cartId);
+      setQtyInput(String(item.qty));
+      setShowQtyModal(true);
+    }, 400);
+  };
+
+  const handleQtyTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleQtyClick = (e: React.MouseEvent, item: CartItem) => {
+    e.stopPropagation();
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false;
+      return;
+    }
+    // Direct Tap: Immediately increments quantity by +1 (qty + 1)
+    soundFX.playBlip(880);
+    dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: item.qty + 1 });
+  };
+
   // Active cart item
   const activeItem = useMemo(() => {
     if (!activeCartId) return cart[cart.length - 1] || null;
@@ -1367,26 +1401,30 @@ export default function PosRegisterPage() {
               <AnimatePresence initial={false}>
                 {cart.map((item) => {
                   const isSelected = activeCartId === item.cartId;
-                  const condimentSummary = [
-                    item.notes,
-                    item.size,
-                    item.sweetness === "0%"
-                      ? "No Sugar (0%)"
-                      : item.sweetness === "30%"
-                      ? "Less Sweet (30%)"
-                      : item.sweetness === "50%"
-                      ? "Half Sweet (50%)"
-                      : item.sweetness === "70%"
-                      ? "70% Sugar"
-                      : item.sweetness === "100%"
-                      ? "Normal Sweet (100%)"
-                      : item.sweetness
-                      ? `${item.sweetness} Sugar`
-                      : "",
-                    item.ice,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ");
+                  const condimentLines: { label: string; value: string }[] = [];
+                  if (item.notes) {
+                    if (item.category === "pastries") {
+                      condimentLines.push({ label: "Warm Up", value: item.notes });
+                    } else {
+                      condimentLines.push({ label: "Temp", value: item.notes });
+                    }
+                  }
+                  if (item.size) {
+                    condimentLines.push({ label: "Size", value: item.size });
+                  }
+                  if (item.sweetness) {
+                    let sVal = item.sweetness;
+                    if (item.sweetness === "0%") sVal = "No Sugar (0%)";
+                    else if (item.sweetness === "30%") sVal = "Less Sweet (30%)";
+                    else if (item.sweetness === "50%") sVal = "Half Sweet (50%)";
+                    else if (item.sweetness === "70%") sVal = "70% Sugar";
+                    else if (item.sweetness === "100%") sVal = "Normal Sweet (100%)";
+                    else sVal = `${item.sweetness} Sugar`;
+                    condimentLines.push({ label: "Sugar", value: sVal });
+                  }
+                  if (item.ice) {
+                    condimentLines.push({ label: "Ice", value: item.ice });
+                  }
 
                   return (
                     <motion.div
@@ -1424,9 +1462,9 @@ export default function PosRegisterPage() {
                           soundFX.playBlip(950);
                           setActiveCartId(item.cartId);
                         }}
-                        className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
+                        className={`relative z-10 flex items-start py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
                           isSelected
-                            ? "bg-stone-50/70 text-[#4A2E1F] border-l-4 border-[#4A2E1F]"
+                            ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
                             : "bg-white hover:bg-stone-50 border-l-4 border-transparent"
                         }`}
                       >
@@ -1434,32 +1472,41 @@ export default function PosRegisterPage() {
                         <div className="flex-1 min-w-0 pr-2">
                           <span
                             className={`text-xs md:text-sm font-semibold truncate block leading-tight ${
-                              isSelected ? "text-[#4A2E1F]" : "text-stone-900"
+                              isSelected ? "text-stone-950 font-bold" : "text-stone-900"
                             }`}
                           >
                             {item.name}
                           </span>
-                          <span className="text-[11px] text-stone-500 font-normal leading-normal whitespace-normal break-words block mt-0.5">
-                            {condimentSummary || "Regular"}
-                          </span>
+                          {condimentLines.length > 0 ? (
+                            <div className="text-[11px] text-stone-500 font-normal leading-tight pl-1.5 border-l border-stone-200 mt-1 space-y-0.5">
+                              {condimentLines.map((line, idx) => (
+                                <div key={idx} className="whitespace-normal break-words">
+                                  <span className="text-stone-400 font-medium">{line.label}:</span> {line.value}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-stone-400 font-normal block mt-0.5">Regular</span>
+                          )}
                         </div>
 
                         {/* PRICE (w-16 text-right) */}
-                        <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0">
+                        <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0 self-start pt-0.5">
                           {formatUSD(item.price)}
                         </div>
 
-                        {/* QTY (w-14 text-center): Tapping opens Popover */}
-                        <div className="w-14 flex items-center justify-center shrink-0">
+                        {/* QTY (w-14 text-center): Tap to +1, Hold (400ms) to open popover */}
+                        <div className="w-14 flex items-center justify-center shrink-0 self-start pt-0.5">
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveCartId(item.cartId);
-                              setQtyInput(String(item.qty));
-                              setShowQtyModal(true);
-                            }}
-                            className="h-6 min-w-[26px] px-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs md:text-sm transition-colors cursor-pointer flex items-center justify-center"
+                            onMouseDown={() => handleQtyTouchStart(item)}
+                            onMouseUp={handleQtyTouchEnd}
+                            onMouseLeave={handleQtyTouchEnd}
+                            onTouchStart={() => handleQtyTouchStart(item)}
+                            onTouchEnd={handleQtyTouchEnd}
+                            onClick={(e) => handleQtyClick(e, item)}
+                            title="Tap to +1, Hold (400ms) to edit"
+                            className="h-6 min-w-[26px] px-2 rounded-lg bg-stone-100 hover:bg-stone-200 active:scale-95 text-stone-800 font-bold text-xs md:text-sm transition-all cursor-pointer flex items-center justify-center select-none"
                           >
                             {item.qty}
                           </button>
@@ -1467,8 +1514,8 @@ export default function PosRegisterPage() {
 
                         {/* AMOUNT (w-20 text-right) */}
                         <div
-                          className={`w-20 text-right text-xs md:text-sm font-bold shrink-0 ${
-                            isSelected ? "text-[#4A2E1F]" : "text-stone-900"
+                          className={`w-20 text-right text-xs md:text-sm font-bold shrink-0 self-start pt-0.5 ${
+                            isSelected ? "text-stone-950 font-black" : "text-stone-900"
                           }`}
                         >
                           {formatUSD(item.price * item.qty)}
