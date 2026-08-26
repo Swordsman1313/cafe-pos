@@ -1367,11 +1367,23 @@ export default function PosRegisterPage() {
               <AnimatePresence initial={false}>
                 {cart.map((item) => {
                   const isSelected = activeCartId === item.cartId;
-                  const modifierSummary = [
+                  const condimentSummary = [
                     item.notes,
                     item.size,
-                    item.sweetness ? `${item.sweetness} Sugar` : "",
-                    item.ice ? `${item.ice}` : "",
+                    item.sweetness === "0%"
+                      ? "No Sugar (0%)"
+                      : item.sweetness === "30%"
+                      ? "Less Sweet (30%)"
+                      : item.sweetness === "50%"
+                      ? "Half Sweet (50%)"
+                      : item.sweetness === "70%"
+                      ? "70% Sugar"
+                      : item.sweetness === "100%"
+                      ? "Normal Sweet (100%)"
+                      : item.sweetness
+                      ? `${item.sweetness} Sugar`
+                      : "",
+                    item.ice,
                   ]
                     .filter(Boolean)
                     .join(" · ");
@@ -1414,7 +1426,7 @@ export default function PosRegisterPage() {
                         }}
                         className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
                           isSelected
-                            ? "bg-[#F7F2EE] text-[#4A2E1F] border-l-4 border-[#4A2E1F]"
+                            ? "bg-stone-50/70 text-[#4A2E1F] border-l-4 border-[#4A2E1F]"
                             : "bg-white hover:bg-stone-50 border-l-4 border-transparent"
                         }`}
                       >
@@ -1427,8 +1439,8 @@ export default function PosRegisterPage() {
                           >
                             {item.name}
                           </span>
-                          <span className="text-[11px] text-stone-500 font-normal truncate block mt-0.5">
-                            {modifierSummary || "Regular"}
+                          <span className="text-[11px] text-stone-500 font-normal leading-normal whitespace-normal break-words block mt-0.5">
+                            {condimentSummary || "Regular"}
                           </span>
                         </div>
 
@@ -1437,9 +1449,20 @@ export default function PosRegisterPage() {
                           {formatUSD(item.price)}
                         </div>
 
-                        {/* QTY (w-14 text-center) */}
-                        <div className="w-14 text-center text-xs md:text-sm font-bold text-stone-800 shrink-0">
-                          {item.qty}
+                        {/* QTY (w-14 text-center): Tapping opens Popover */}
+                        <div className="w-14 flex items-center justify-center shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveCartId(item.cartId);
+                              setQtyInput(String(item.qty));
+                              setShowQtyModal(true);
+                            }}
+                            className="h-6 min-w-[26px] px-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs md:text-sm transition-colors cursor-pointer flex items-center justify-center"
+                          >
+                            {item.qty}
+                          </button>
                         </div>
 
                         {/* AMOUNT (w-20 text-right) */}
@@ -1856,58 +1879,112 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 3. Quantity Modal */}
+      {/* 3. Quantity Popover / Keypad Modal */}
       {showQtyModal && activeItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-xs bg-white rounded-3xl p-5 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-              <span className="text-xs font-black text-stone-900">Quantity: {activeItem.name}</span>
-              <button type="button" onClick={() => setShowQtyModal(false)} className="text-stone-400 text-xs font-bold">
+              <span className="text-xs font-black text-stone-900 truncate">Quantity: {activeItem.name}</span>
+              <button type="button" onClick={() => setShowQtyModal(false)} className="text-stone-400 hover:text-stone-700 text-xs font-bold">
                 ✕
               </button>
             </div>
 
-            <div className="h-10 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center text-lg font-black text-stone-900">
-              {qtyInput || activeItem.qty}
+            {/* [ − ] / Display / [ + ] Steppers */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFX.playBlip(750);
+                  const current = parseInt(qtyInput) || activeItem.qty;
+                  const next = Math.max(1, current - 1);
+                  setQtyInput(String(next));
+                }}
+                className="h-11 w-11 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-lg font-black flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+              >
+                −
+              </button>
+
+              <div className="flex-1 h-11 rounded-2xl bg-stone-50 border-2 border-[#4A2E1F]/30 flex items-center justify-center text-xl font-black text-stone-900">
+                {qtyInput || activeItem.qty}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFX.playBlip(880);
+                  const current = parseInt(qtyInput) || activeItem.qty;
+                  const next = current + 1;
+                  setQtyInput(String(next));
+                }}
+                className="h-11 w-11 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-lg font-black flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+              >
+                +
+              </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-1">
+            {/* Numeric Numpad */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                 <button
                   key={n}
                   type="button"
-                  onClick={() => setQtyInput((prev) => prev + String(n))}
-                  className="h-9 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-sm font-black text-stone-900"
+                  onClick={() => {
+                    soundFX.playBlip(900);
+                    setQtyInput((prev) => (prev === "0" ? String(n) : prev + String(n)));
+                  }}
+                  className="h-10 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-sm font-black text-stone-900 transition-colors cursor-pointer"
                 >
                   {n}
                 </button>
               ))}
               <button
                 type="button"
-                onClick={() => setQtyInput("")}
-                className="h-9 rounded-xl bg-rose-50 text-rose-700 text-xs font-black"
+                onClick={() => {
+                  soundFX.playBlip(600);
+                  setQtyInput("");
+                }}
+                className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black border border-rose-200 transition-colors cursor-pointer"
               >
                 C
               </button>
               <button
                 type="button"
-                onClick={() => setQtyInput((prev) => prev + "0")}
-                className="h-9 rounded-xl bg-stone-50 border border-stone-200 text-sm font-black"
+                onClick={() => {
+                  soundFX.playBlip(900);
+                  if (qtyInput) setQtyInput((prev) => prev + "0");
+                }}
+                className="h-10 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-sm font-black text-stone-900 transition-colors cursor-pointer"
               >
                 0
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  const targetQty = parseInt(qtyInput) || activeItem.qty;
+                  soundFX.playSuccess();
+                  const targetQty = Math.max(1, parseInt(qtyInput) || activeItem.qty);
                   dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: targetQty });
                   setShowQtyModal(false);
                 }}
-                className="h-9 rounded-xl bg-stone-900 text-white text-xs font-black"
+                className="h-10 rounded-xl bg-[#4A2E1F] hover:bg-[#3b2418] text-white text-xs font-black transition-colors cursor-pointer"
               >
-                Apply ✓
+                Set ✓
               </button>
             </div>
+
+            {/* Remove Item Button */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(600);
+                dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
+                setShowQtyModal(false);
+              }}
+              className="w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+              <span>Remove Item</span>
+            </button>
           </div>
         </div>
       )}
