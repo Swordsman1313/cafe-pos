@@ -524,9 +524,10 @@ export default function PosRegisterPage() {
   const [lastCompletedSale, setLastCompletedSale] = useState<CompletedOrderRecord | null>(null);
 
   // Cash Modal State
-  const [activeCashField, setActiveCashField] = useState<"USD" | "KHR">("USD");
+  const [activeCashField, setActiveCashField] = useState<"USD" | "KHR">("KHR");
   const [cashInputUSD, setCashInputUSD] = useState<string>("");
   const [cashInputKHR, setCashInputKHR] = useState<string>("");
+  const [changeFormat, setChangeFormat] = useState<"ALL_KHR" | "SPLIT_USD_KHR">("ALL_KHR");
 
   // Qty Numpad State
   const [qtyInput, setQtyInput] = useState<string>("");
@@ -632,7 +633,7 @@ export default function PosRegisterPage() {
     if (method === "CASH") {
       setCashInputUSD("");
       setCashInputKHR("");
-      setActiveCashField("USD");
+      setActiveCashField("KHR");
       setShowCashModal(true);
       soundFX.playBlip(780);
     } else if (method === "PAYMENT") {
@@ -1698,22 +1699,76 @@ export default function PosRegisterPage() {
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
-              <div>
-                <span className="text-[10px] font-black text-emerald-900 uppercase tracking-wider">
-                  {changeDueUSD > 0 ? "Change Due (100៛ Rounded)" : "Remaining Balance"}
-                </span>
-                <span className={`text-base font-black block leading-none ${changeDueUSD > 0 ? "text-emerald-800" : "text-rose-600"}`}>
-                  {changeDueUSD > 0 ? formatUSD(changeDueUSD) : formatUSD(remainingUSD)}
-                </span>
+            {/* Balance / Change Due Display Box */}
+            {changeDueUSD > 0 ? (
+              <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-black text-emerald-900 uppercase tracking-wider block">
+                      {changeFormat === "ALL_KHR" ? "Change Due (All in Riel)" : "Change Due (USD + Riel)"}
+                    </span>
+                    {changeFormat === "ALL_KHR" ? (
+                      <div>
+                        <span className="text-xl font-black text-emerald-800 leading-tight block">
+                          {formatKHRDirect(changeDueKHR)}
+                        </span>
+                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                          ≈ {formatUSD(changeDueUSD)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          {Math.floor(changeDueUSD) > 0 && (
+                            <span className="text-xl font-black text-emerald-800 leading-tight">
+                              ${Math.floor(changeDueUSD)}.00
+                            </span>
+                          )}
+                          {Math.floor(changeDueUSD) > 0 && roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE) > 0 && (
+                            <span className="text-sm font-bold text-emerald-600">+</span>
+                          )}
+                          {roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE) > 0 && (
+                            <span className="text-lg font-black text-emerald-700 leading-tight">
+                              {formatKHRDirect(roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE))}
+                            </span>
+                          )}
+                          {Math.floor(changeDueUSD) === 0 && roundKHR((changeDueUSD - Math.floor(changeDueUSD)) * KHR_RATE) === 0 && (
+                            <span className="text-lg font-black text-emerald-800">$0.00</span>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                          Total: {formatKHRDirect(changeDueKHR)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toggle Button to Switch between All Riel and Dollar + Riel */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(900);
+                      setChangeFormat((prev) => (prev === "ALL_KHR" ? "SPLIT_USD_KHR" : "ALL_KHR"));
+                    }}
+                    className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-900 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95"
+                  >
+                    <span>💱</span>
+                    <span>{changeFormat === "ALL_KHR" ? "Change in Dollar + Riel" : "Change in All Riel"}</span>
+                  </button>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] font-black text-emerald-900 uppercase tracking-wider">In Cambodian Riel</span>
-                <span className={`text-sm font-black block leading-none ${changeDueUSD > 0 ? "text-emerald-800" : "text-rose-600"}`}>
-                  {changeDueUSD > 0 ? formatKHRDirect(changeDueKHR) : formatKHRDirect(roundKHR(remainingUSD * KHR_RATE))}
-                </span>
+            ) : (
+              <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] font-black text-rose-900 uppercase tracking-wider block">Remaining Balance</span>
+                  <span className="text-base font-black text-rose-600 block leading-none">{formatUSD(remainingUSD)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-black text-rose-900 uppercase tracking-wider block">In Cambodian Riel</span>
+                  <span className="text-base font-black text-rose-600 block leading-none">{formatKHRDirect(roundKHR(remainingUSD * KHR_RATE))}</span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quick Fill */}
             <div className="space-y-1">
@@ -2125,9 +2180,31 @@ export default function PosRegisterPage() {
               </div>
 
               {lastCompletedSale.paymentMethod === "CASH" && lastCompletedSale.changeUSD > 0 && (
-                <div className="flex justify-between font-black text-emerald-800 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
-                  <span>Change Given:</span>
-                  <span>{formatUSD(lastCompletedSale.changeUSD)} ({formatKHRDirect(lastCompletedSale.changeKHR)})</span>
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1 text-xs">
+                  <div className="flex items-center justify-between font-black text-emerald-900">
+                    <span>Change Given ({changeFormat === "ALL_KHR" ? "All in Riel" : "Dollar + Riel"}):</span>
+                    <button
+                      type="button"
+                      onClick={() => setChangeFormat((prev) => (prev === "ALL_KHR" ? "SPLIT_USD_KHR" : "ALL_KHR"))}
+                      className="text-[10px] font-bold text-emerald-800 underline hover:text-emerald-950 cursor-pointer"
+                    >
+                      {changeFormat === "ALL_KHR" ? "💱 Switch to Dollar + Riel" : "💱 Switch to All Riel"}
+                    </button>
+                  </div>
+                  {changeFormat === "ALL_KHR" ? (
+                    <div className="text-base font-black text-emerald-800">
+                      {formatKHRDirect(lastCompletedSale.changeKHR)}{" "}
+                      <span className="text-xs font-normal text-stone-500">({formatUSD(lastCompletedSale.changeUSD)})</span>
+                    </div>
+                  ) : (
+                    <div className="text-base font-black text-emerald-800">
+                      {Math.floor(lastCompletedSale.changeUSD) > 0 ? `$${Math.floor(lastCompletedSale.changeUSD)}.00` : ""}
+                      {Math.floor(lastCompletedSale.changeUSD) > 0 && roundKHR((lastCompletedSale.changeUSD - Math.floor(lastCompletedSale.changeUSD)) * KHR_RATE) > 0 ? " + " : ""}
+                      {roundKHR((lastCompletedSale.changeUSD - Math.floor(lastCompletedSale.changeUSD)) * KHR_RATE) > 0
+                        ? formatKHRDirect(roundKHR((lastCompletedSale.changeUSD - Math.floor(lastCompletedSale.changeUSD)) * KHR_RATE))
+                        : ""}
+                    </div>
+                  )}
                 </div>
               )}
 
