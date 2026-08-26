@@ -220,7 +220,7 @@ const formatKHRDirect = (khrVal: number) => `${Math.round(khrVal).toLocaleString
 /* ------------------------------------------------------------------ */
 
 type CartAction =
-  | { type: "ADD_PRODUCT"; product: ProductItem }
+  | { type: "ADD_PRODUCT"; product: ProductItem; cartId?: string }
   | { type: "INCREMENT_QTY"; cartId: string }
   | { type: "UPDATE_QTY"; cartId: string; qty: number }
   | { type: "UPDATE_MODIFIER"; cartId: string; field: "size" | "sweetness" | "ice" | "notes"; value: string }
@@ -230,7 +230,7 @@ type CartAction =
 function cartReducer(state: CartItem[], action: CartAction): CartItem[] {
   switch (action.type) {
     case "ADD_PRODUCT": {
-      const newCartId = `${action.product.id}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+      const newCartId = action.cartId || `${action.product.id}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
       const newItem: CartItem = {
         cartId: newCartId,
         productId: action.product.id,
@@ -590,9 +590,11 @@ export default function PosRegisterPage() {
     soundFX.playBlip(880);
     if (activeItem && activeItem.productId === product.id) {
       dispatch({ type: "INCREMENT_QTY", cartId: activeItem.cartId });
+      setActiveCartId(activeItem.cartId);
     } else {
-      dispatch({ type: "ADD_PRODUCT", product });
-      setActiveCartId(null);
+      const newCartId = `${product.id}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+      dispatch({ type: "ADD_PRODUCT", product, cartId: newCartId });
+      setActiveCartId(newCartId);
     }
   };
 
