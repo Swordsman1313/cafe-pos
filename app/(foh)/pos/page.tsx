@@ -530,6 +530,10 @@ export default function PosRegisterPage() {
   const [changeFormat, setChangeFormat] = useState<"ALL_KHR" | "SPLIT_USD_KHR">("ALL_KHR");
   const [customUSDChange, setCustomUSDChange] = useState<number | null>(null);
 
+  // Receipt Modal Change Calculator State
+  const [receiptChangeMode, setReceiptChangeMode] = useState<"ALL_KHR" | "SPLIT_USD_KHR">("ALL_KHR");
+  const [receiptUSDInput, setReceiptUSDInput] = useState<string>("");
+
   // Qty Numpad State
   const [qtyInput, setQtyInput] = useState<string>("");
 
@@ -710,6 +714,8 @@ export default function PosRegisterPage() {
     setDiscountUSD(0);
     setSelectedTable(null);
     setSelectedCustomer(null);
+    setReceiptChangeMode("ALL_KHR");
+    setReceiptUSDInput("");
     setTicketNumber(`T-${Math.floor(100 + Math.random() * 900)}`);
     setShowReceiptModal(true);
   };
@@ -2219,7 +2225,7 @@ export default function PosRegisterPage() {
       {/* 6. Completed Sale Receipt Modal */}
       {showReceiptModal && lastCompletedSale && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center max-h-[90vh] overflow-y-auto">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
               <CheckCircle2 size={28} />
             </div>
@@ -2229,52 +2235,227 @@ export default function PosRegisterPage() {
               <p className="text-xs text-stone-400">{lastCompletedSale.timestamp} · {lastCompletedSale.paymentMethod}</p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 text-left space-y-1.5 text-xs">
-              <div className="flex justify-between font-black text-stone-900 border-b border-stone-200 pb-1.5">
-                <span>Total Paid:</span>
-                <span>{formatUSD(lastCompletedSale.total)} ({formatKHRDirect(roundKHR(lastCompletedSale.total * KHR_RATE))})</span>
-              </div>
+            {/* Total Paid Row */}
+            <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between text-xs">
+              <span className="font-bold text-stone-500">Total Paid:</span>
+              <span className="font-black text-stone-900 text-sm">
+                {formatUSD(lastCompletedSale.total)} ({formatKHRDirect(roundKHR(lastCompletedSale.total * KHR_RATE))})
+              </span>
+            </div>
 
-              {lastCompletedSale.paymentMethod === "CASH" && lastCompletedSale.changeUSD > 0 && (
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1 text-xs">
-                  <div className="flex items-center justify-between font-black text-emerald-900">
-                    <span>Change Given ({changeFormat === "ALL_KHR" ? "All in Riel" : "Dollar + Riel"}):</span>
+            {/* Change Calculator Section if Change > 0 */}
+            {lastCompletedSale.paymentMethod === "CASH" && lastCompletedSale.changeUSD > 0 && (() => {
+              const totalChangeUSD = lastCompletedSale.changeUSD;
+              const maxUSD = Math.floor(totalChangeUSD);
+              const parsedUSDInput = parseInt(receiptUSDInput);
+              const givenUSD = isNaN(parsedUSDInput)
+                ? (receiptChangeMode === "SPLIT_USD_KHR" ? maxUSD : 0)
+                : Math.min(maxUSD, Math.max(0, parsedUSDInput));
+              const remainingUSD = Math.max(0, totalChangeUSD - givenUSD);
+              const remainingKHR = roundKHR(remainingUSD * KHR_RATE);
+
+              return (
+                <div className="space-y-3">
+                  {/* Segmented Pill Toggle: [ All in Riel ] | [ Dollar + Riel ] */}
+                  <div className="grid grid-cols-2 p-1 bg-stone-100 rounded-2xl gap-1">
                     <button
                       type="button"
-                      onClick={() => setChangeFormat((prev) => (prev === "ALL_KHR" ? "SPLIT_USD_KHR" : "ALL_KHR"))}
-                      className="text-[10px] font-bold text-emerald-800 underline hover:text-emerald-950 cursor-pointer"
+                      onClick={() => {
+                        soundFX.playBlip(900);
+                        setReceiptChangeMode("ALL_KHR");
+                        setReceiptUSDInput("0");
+                      }}
+                      className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        receiptChangeMode === "ALL_KHR"
+                          ? "bg-white text-stone-900 shadow-2xs"
+                          : "text-stone-500 hover:text-stone-900"
+                      }`}
                     >
-                      {changeFormat === "ALL_KHR" ? "💱 Switch to Dollar + Riel" : "💱 Switch to All Riel"}
+                      All in Riel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip(900);
+                        setReceiptChangeMode("SPLIT_USD_KHR");
+                        if (!receiptUSDInput || receiptUSDInput === "0") {
+                          setReceiptUSDInput(String(maxUSD));
+                        }
+                      }}
+                      className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        receiptChangeMode === "SPLIT_USD_KHR"
+                          ? "bg-white text-stone-900 shadow-2xs"
+                          : "text-stone-500 hover:text-stone-900"
+                      }`}
+                    >
+                      Dollar + Riel
                     </button>
                   </div>
-                  {changeFormat === "ALL_KHR" ? (
-                    <div className="text-base font-black text-emerald-800">
-                      {formatKHRDirect(lastCompletedSale.changeKHR)}{" "}
-                      <span className="text-xs font-normal text-stone-500">({formatUSD(lastCompletedSale.changeUSD)})</span>
+
+                  {/* Mode 1: All in Riel Display */}
+                  {receiptChangeMode === "ALL_KHR" ? (
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
+                      <span className="text-[11px] font-black text-emerald-900 uppercase tracking-wider block">
+                        Change Due (All in Riel)
+                      </span>
+                      <span className="text-3xl font-black text-emerald-700 block tracking-tight">
+                        {formatKHRDirect(lastCompletedSale.changeKHR)}
+                      </span>
+                      <span className="text-xs font-semibold text-stone-500 block">
+                        ≈ {formatUSD(lastCompletedSale.changeUSD)}
+                      </span>
                     </div>
                   ) : (
-                    <div className="text-base font-black text-emerald-800">
-                      {Math.floor(lastCompletedSale.changeUSD) > 0 ? `$${Math.floor(lastCompletedSale.changeUSD)}.00` : ""}
-                      {Math.floor(lastCompletedSale.changeUSD) > 0 && roundKHR((lastCompletedSale.changeUSD - Math.floor(lastCompletedSale.changeUSD)) * KHR_RATE) > 0 ? " + " : ""}
-                      {roundKHR((lastCompletedSale.changeUSD - Math.floor(lastCompletedSale.changeUSD)) * KHR_RATE) > 0
-                        ? formatKHRDirect(roundKHR((lastCompletedSale.changeUSD - Math.floor(lastCompletedSale.changeUSD)) * KHR_RATE))
-                        : ""}
+                    /* Mode 2: Dynamic Split Dollar + Riel Mode */
+                    <div className="space-y-3">
+                      {/* Breakdown Box */}
+                      <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
+                        <div className="p-2.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+                            Give in USD
+                          </span>
+                          <span className="text-2xl font-black text-emerald-900 block mt-0.5">
+                            ${givenUSD}.00
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+                            Give in KHR
+                          </span>
+                          <span className="text-2xl font-black text-emerald-700 block mt-0.5">
+                            {formatKHRDirect(remainingKHR)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Direct Numeric Input & Steppers */}
+                      {maxUSD > 0 && (
+                        <div className="space-y-1.5 text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-stone-600">Enter USD Bills to Give:</span>
+                            <span className="text-[10px] font-bold text-stone-400">Max: ${maxUSD}.00</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-stone-400 text-lg">$</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={maxUSD}
+                                value={receiptUSDInput}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === "" || parseInt(val) <= maxUSD) {
+                                    setReceiptUSDInput(val);
+                                  }
+                                }}
+                                placeholder="0"
+                                className="w-full h-11 pl-8 pr-3 rounded-xl border border-stone-300 text-center text-lg font-bold text-stone-900 focus:border-emerald-500 focus:outline-none bg-white shadow-2xs"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                soundFX.playBlip(750);
+                                const current = parseInt(receiptUSDInput) || 0;
+                                setReceiptUSDInput(String(Math.max(0, current - 1)));
+                              }}
+                              className="h-11 w-11 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-lg font-black flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              −
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                soundFX.playBlip(880);
+                                const current = parseInt(receiptUSDInput) || 0;
+                                setReceiptUSDInput(String(Math.min(maxUSD, current + 1)));
+                              }}
+                              className="h-11 w-11 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-lg font-black flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Quick Pill Buttons */}
+                          <div className="flex flex-wrap gap-1 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                soundFX.playBlip(880);
+                                setReceiptUSDInput("0");
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                givenUSD === 0
+                                  ? "bg-emerald-700 text-white shadow-xs"
+                                  : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                              }`}
+                            >
+                              $0
+                            </button>
+                            {[1, 2, 5, 10, 20, 50, 100]
+                              .filter((d) => d <= maxUSD)
+                              .map((d) => (
+                                <button
+                                  key={d}
+                                  type="button"
+                                  onClick={() => {
+                                    soundFX.playBlip(900);
+                                    setReceiptUSDInput(String(d));
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                    givenUSD === d
+                                      ? "bg-emerald-700 text-white shadow-xs"
+                                      : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                                  }`}
+                                >
+                                  ${d}
+                                </button>
+                              ))}
+                            {maxUSD > 1 && ![1, 2, 5, 10, 20, 50, 100].includes(maxUSD) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  soundFX.playBlip(900);
+                                  setReceiptUSDInput(String(maxUSD));
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                  givenUSD === maxUSD
+                                    ? "bg-emerald-700 text-white shadow-xs"
+                                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                                }`}
+                              >
+                                ${maxUSD} (Max)
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
+              );
+            })()}
 
-              <div className="text-[10px] text-stone-500 space-y-0.5 pt-1">
+            {/* Items Receipt Summary */}
+            <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 text-left space-y-1 text-xs">
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider block mb-1">
+                Order Items ({lastCompletedSale.items.length})
+              </span>
+              <div className="text-[11px] text-stone-600 space-y-0.5 max-h-32 overflow-y-auto pr-1">
                 {lastCompletedSale.items.map((it, idx) => (
                   <div key={idx} className="flex justify-between">
-                    <span>{it.qty}x {it.name}</span>
-                    <span>{formatUSD(it.total)}</span>
+                    <span className="truncate pr-2">{it.qty}x {it.name}</span>
+                    <span className="font-semibold text-stone-900 shrink-0">{formatUSD(it.total)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-2">
+            {/* Modal Actions */}
+            <div className="flex gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -2282,14 +2463,14 @@ export default function PosRegisterPage() {
                     window.print();
                   } catch {}
                 }}
-                className="flex-1 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-black text-xs flex items-center justify-center gap-1.5"
+                className="flex-1 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Printer size={14} /> Print Slip
               </button>
               <button
                 type="button"
                 onClick={() => setShowReceiptModal(false)}
-                className="flex-1 py-2.5 rounded-2xl text-white font-black text-xs shadow-md active:scale-95"
+                className="flex-1 py-3 rounded-2xl text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer"
                 style={{ background: "#4A2E1F" }}
               >
                 New Order →
