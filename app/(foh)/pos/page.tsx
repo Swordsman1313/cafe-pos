@@ -899,17 +899,12 @@ export default function PosRegisterPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                     {filteredProducts.map((product) => {
                       const ProductIcon = CATEGORY_ICON[product.category] || Coffee;
-                      const isCardActive = activeItem?.productId === product.id;
 
                       return (
                         <div
                           key={product.id}
                           onClick={() => handleProductCardClick(product)}
-                          className={`group rounded-2xl border p-2 flex items-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer shadow-2xs ${
-                            isCardActive
-                              ? "bg-amber-50/70 border-[#4A2E1F] ring-1 ring-[#4A2E1F]"
-                              : "bg-white border-stone-200/90 hover:border-stone-400 hover:shadow-xs"
-                          }`}
+                          className="group rounded-2xl border border-stone-200/90 bg-white hover:border-stone-400 hover:shadow-xs p-2 flex items-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
                         >
                           {/* Square Thumbnail on Left */}
                           <div
@@ -1086,23 +1081,7 @@ export default function PosRegisterPage() {
 
           {/* ── 2. Compact Multi-Row Modifier Panel with UNIFORM EQUAL BUTTON SIZES (5-Column Grid) ── */}
           {activeNav === "register" && activeItem && (activeIsBeverage || activeIsPastry) && (
-            <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-5 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
-              {/* Context Header */}
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Condiments:</span>
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black text-white shadow-2xs" style={{ background: "#4A2E1F" }}>
-                    {activeItem.name} ({formatUSD(activeItem.price)})
-                  </span>
-                  {getMissingModifiers(activeItem).length > 0 && (
-                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      ⚠️ Required: {getMissingModifiers(activeItem).join(", ")}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-stone-400 font-medium">1 Row Per Group · Equal Width Buttons</span>
-              </div>
-
+            <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-5 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
               {/* Multi-Row Grid Stack with SHORTER, COMPACT BUTTON SIZES (grid-cols-5 max-w-xl) */}
               {activeIsBeverage ? (
                 <div className="flex flex-col gap-1.5">
