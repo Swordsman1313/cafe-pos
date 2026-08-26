@@ -514,8 +514,8 @@ export default function PosRegisterPage() {
     offlineStorage.saveCompletedOrders(completedOrders);
   }, [completedOrders]);
 
-  // Modals
-  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  // Modals & Inline Keypad Panels
+  const [showNonCashOptions, setShowNonCashOptions] = useState<boolean>(false);
   const [showCashModal, setShowCashModal] = useState<boolean>(false);
   const [showKHQRModal, setShowKHQRModal] = useState<boolean>(false);
   const [showQtyModal, setShowQtyModal] = useState<boolean>(false);
@@ -643,10 +643,11 @@ export default function PosRegisterPage() {
       setCashInputKHR("");
       setActiveCashField("KHR");
       setCustomUSDChange(null);
+      setShowNonCashOptions(false);
       setShowCashModal(true);
       soundFX.playBlip(780);
     } else if (method === "PAYMENT") {
-      setShowPaymentModal(true);
+      setShowNonCashOptions(true);
       soundFX.playBlip(780);
     } else if (method === "KITCHEN") {
       soundFX.playKitchen();
@@ -712,7 +713,7 @@ export default function PosRegisterPage() {
     }
 
     setShowCashModal(false);
-    setShowPaymentModal(false);
+    setShowNonCashOptions(false);
     setShowKHQRModal(false);
     dispatch({ type: "CLEAR" });
     setDiscountUSD(0);
@@ -1534,114 +1535,166 @@ export default function PosRegisterPage() {
             </div>
           </div>
 
-          {/* ── Action Keypad Grid (Flush at bottom right corner) ── */}
+          {/* ── Action Keypad Grid / Inline Non-Cash Payment Panel (Flush at bottom right corner) ── */}
           <div className="shrink-0 p-2.5 bg-stone-100/95 border-t border-stone-200">
-            <div className="grid grid-cols-4 gap-1.5">
-              {/* Row 1 */}
-              <button
-                type="button"
-                onClick={() => handleInitiatePayment("CASH")}
-                className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-              >
-                <Banknote size={14} />
-                <span>CASH</span>
-              </button>
+            {showNonCashOptions ? (
+              <div className="space-y-2 animate-in fade-in duration-150">
+                {/* Header with ← Back Button */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-stone-600 flex items-center gap-1.5">
+                    <CreditCard size={12} className="text-[#4A2E1F]" /> Select Non-Cash Payment
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(750);
+                      setShowNonCashOptions(false);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-all cursor-pointer active:scale-95"
+                  >
+                    <ArrowLeft size={11} /> Back
+                  </button>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => handleInitiatePayment("PAYMENT")}
-                className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                style={{ background: "#4A2E1F" }}
-              >
-                <QrCode size={14} />
-                <span>PAYMENT</span>
-              </button>
+                {/* 2 Non-Cash Payment Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(880);
+                      setShowNonCashOptions(false);
+                      setKhqrTimer(120);
+                      setShowKHQRModal(true);
+                    }}
+                    className="h-14 rounded-2xl flex items-center justify-center gap-2 text-white font-bold text-xs shadow-md active:scale-95 transition-all cursor-pointer group"
+                    style={{ background: "#4A2E1F" }}
+                  >
+                    <QrCode size={18} className="group-hover:scale-110 transition-transform" />
+                    <span>Bakong KHQR</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (!activeItem) return;
-                  soundFX.playBlip(800);
-                  setQtyInput("");
-                  setShowQtyModal(true);
-                }}
-                className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Hash size={13} className="text-amber-800" />
-                <span>QUANTITY</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(880);
+                      setShowNonCashOptions(false);
+                      handleCompleteSale("CREDIT CARD");
+                    }}
+                    className="h-14 rounded-2xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                  >
+                    <CreditCard size={18} className="group-hover:scale-110 transition-transform" />
+                    <span>Credit / Debit Card</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-1.5">
+                {/* Row 1 */}
+                <button
+                  type="button"
+                  onClick={() => handleInitiatePayment("CASH")}
+                  className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <Banknote size={14} />
+                  <span>CASH</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(800);
-                  setShowPromoModal(true);
-                }}
-                className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                  discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
-                }`}
-              >
-                <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
-                <span>PROMO</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleInitiatePayment("PAYMENT")}
+                  className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                  style={{ background: "#4A2E1F" }}
+                >
+                  <QrCode size={14} />
+                  <span>PAYMENT</span>
+                </button>
 
-              {/* Row 2 */}
-              <button
-                type="button"
-                onClick={() => handleInitiatePayment("KITCHEN")}
-                className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-teal-700 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Send size={13} className="text-teal-700" />
-                <span>KITCHEN</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!activeItem) return;
+                    soundFX.playBlip(800);
+                    setQtyInput("");
+                    setShowQtyModal(true);
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Hash size={13} className="text-amber-800" />
+                  <span>QUANTITY</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(800);
-                  try {
-                    window.print();
-                  } catch {}
-                }}
-                className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Printer size={13} className="text-stone-600" />
-                <span>PRINT</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(800);
+                    setShowPromoModal(true);
+                  }}
+                  className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                    discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
+                  }`}
+                >
+                  <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
+                  <span>PROMO</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(600);
-                  if (activeItem) {
-                    dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
-                  } else {
-                    dispatch({ type: "CLEAR" });
-                  }
-                }}
-                className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Trash2 size={13} />
-                <span>DELETE</span>
-              </button>
+                {/* Row 2 */}
+                <button
+                  type="button"
+                  onClick={() => handleInitiatePayment("KITCHEN")}
+                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-teal-700 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Send size={13} className="text-teal-700" />
+                  <span>KITCHEN</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (heldOrders.length > 0 && cart.length === 0) {
-                    setShowHeldOrdersModal(true);
-                  } else {
-                    handleHoldCurrentOrder();
-                  }
-                }}
-                className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                  heldOrders.length > 0 ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
-                }`}
-              >
-                <PauseCircle size={13} className={heldOrders.length > 0 ? "text-amber-800" : "text-amber-700"} />
-                <span>HOLD ({heldOrders.length})</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(800);
+                    try {
+                      window.print();
+                    } catch {}
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Printer size={13} className="text-stone-600" />
+                  <span>PRINT</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(600);
+                    if (activeItem) {
+                      dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
+                    } else {
+                      dispatch({ type: "CLEAR" });
+                    }
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Trash2 size={13} />
+                  <span>DELETE</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (heldOrders.length > 0 && cart.length === 0) {
+                      setShowHeldOrdersModal(true);
+                    } else {
+                      handleHoldCurrentOrder();
+                    }
+                  }}
+                  className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                    heldOrders.length > 0 ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+                  }`}
+                >
+                  <PauseCircle size={13} className={heldOrders.length > 0 ? "text-amber-800" : "text-amber-700"} />
+                  <span>HOLD ({heldOrders.length})</span>
+                </button>
+              </div>
+            )}
           </div>
         </aside>
       </div>
@@ -1963,106 +2016,7 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 2. Payment Selection Modal (When clicking PAYMENT button) */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-            {/* Top Bar with Back Button */}
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(750);
-                  setShowPaymentModal(false);
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <ArrowLeft size={14} /> Back
-              </button>
-              <span className="text-xs font-black text-stone-900 uppercase tracking-wider">
-                Select Payment
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowPaymentModal(false)}
-                className="text-stone-400 hover:text-stone-700 text-xs font-bold p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Total Due Card */}
-            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-center space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">Total Due</span>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-2xl font-black text-stone-950">{formatUSD(totalUSD)}</span>
-                <span className="text-stone-300 text-lg font-light">|</span>
-                <span className="text-base font-black text-amber-900 bg-amber-100/90 px-2.5 py-0.5 rounded-md border border-amber-200">
-                  {formatKHRDirect(totalKHR)}
-                </span>
-              </div>
-            </div>
-
-            {/* 2 Payment Selection Options */}
-            <div className="grid grid-cols-1 gap-2.5 pt-1">
-              {/* Option 1: KHQR / Bakong Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(880);
-                  setShowPaymentModal(false);
-                  setKhqrTimer(120);
-                  setShowKHQRModal(true);
-                }}
-                className="p-4 rounded-2xl border-2 border-teal-500/40 bg-teal-50/50 hover:bg-teal-50 hover:border-teal-600 transition-all flex items-center gap-3.5 text-left group shadow-2xs active:scale-[0.98] cursor-pointer"
-              >
-                <div className="h-12 w-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                  <QrCode size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-teal-950">Bakong KHQR</span>
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-teal-200/80 text-teal-900">
-                      Dynamic
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-teal-700 truncate mt-0.5 font-medium">
-                    Scan with ABA, ACLEDA, or any KHQR Bank App
-                  </p>
-                </div>
-              </button>
-
-              {/* Option 2: Credit / Debit Card Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(880);
-                  setShowPaymentModal(false);
-                  handleCompleteSale("CREDIT CARD");
-                }}
-                className="p-4 rounded-2xl border-2 border-[#4A2E1F]/20 bg-[#4A2E1F]/5 hover:bg-[#4A2E1F]/10 hover:border-[#4A2E1F]/60 transition-all flex items-center gap-3.5 text-left group shadow-2xs active:scale-[0.98] cursor-pointer"
-              >
-                <div className="h-12 w-12 rounded-2xl bg-[#4A2E1F] text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                  <CreditCard size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-stone-900">Credit / Debit Card</span>
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-stone-200 text-stone-800">
-                      Terminal
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-stone-500 truncate mt-0.5 font-medium">
-                    Visa, Mastercard, UnionPay, JCB Terminal
-                  </p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Bakong KHQR Dynamic Modal */}
+      {/* 2. Bakong KHQR Dynamic Modal */}
       {showKHQRModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center">
@@ -2072,7 +2026,7 @@ export default function PosRegisterPage() {
                 onClick={() => {
                   soundFX.playBlip(750);
                   setShowKHQRModal(false);
-                  setShowPaymentModal(true);
+                  setShowNonCashOptions(true);
                 }}
                 className="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
               >
