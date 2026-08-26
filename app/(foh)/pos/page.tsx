@@ -20,6 +20,7 @@ import {
   Tag,
   Send,
   PauseCircle,
+  PlayCircle,
   Hash,
   ArrowRight,
   Store,
@@ -104,10 +105,12 @@ interface CompletedOrderRecord {
 
 interface HeldOrder {
   id: string;
+  ticketNumber: string;
   tag: string;
   cart: CartItem[];
   savedAt: string;
   channel: string;
+  discountUSD?: number;
   table?: string;
   customer?: string;
 }
@@ -429,15 +432,30 @@ export default function PosRegisterPage() {
     return cart.find((i) => i.cartId === activeCartId) || cart[cart.length - 1] || null;
   }, [cart, activeCartId]);
 
-  // Order Details
-  const [ticketNumber, setTicketNumber] = useState<string>(() => `T-${Math.floor(100 + Math.random() * 900)}`);
+  // Order Sequence & Ticket Details
+  const [ticketSeq, setTicketSeq] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("pos_ticket_seq");
+      if (stored) return parseInt(stored) || 260;
+    }
+    return 260;
+  });
+
+  const [ticketNumber, setTicketNumber] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("pos_ticket_seq");
+      if (stored) return `T-${parseInt(stored) || 260}`;
+    }
+    return "T-260";
+  });
+
   const [orderChannel, setOrderChannel] = useState<"Walk-in" | "Takeaway" | "Delivery">("Walk-in");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerItem | null>(null);
   const [discountUSD, setDiscountUSD] = useState<number>(0);
 
   // Search & Category
-  const [query, setQuery] = useState<string>("");
+  const [query, setQuery] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const categoryScrollRef = useRef<HTMLDivElement>(null);
 
@@ -453,10 +471,32 @@ export default function PosRegisterPage() {
     type?: "success" | "info" | "warning";
   } | null>(null);
 
-  const showNotification = useCallback((title: string, message: string, type: "success" | "info" | "warning" = "success") => {
-    setGeneralToast({ title, message, type });
-    setTimeout(() => setGeneralToast(null), 3000);
-  }, []);
+  const showNotification = useCallback(
+    (title: string, message: string, type: "success" | "info" | "warning" = "success", durationMs: number = 2000) => {
+      setGeneralToast({ title, message, type });
+      setTimeout(() => setGeneralToast(null), durationMs);
+    },
+    []
+  );
+
+  // Single Held Order Model & Lock State (Max 1)
+  const [singleHeldOrder, setSingleHeldOrder] = useState<HeldOrder | null>(() => {
+    if (typeof window !== "undefined") {
+      const list = offlineStorage.loadHeldOrders<HeldOrder[]>();
+      if (Array.isArray(list) && list.length > 0) return list[0];
+    }
+    return null;
+  });
+
+  const [isResumedOrder, setIsResumedOrder] = useState<boolean>(false);
+
+  // Reactive Flags
+  const hasHeldOrder = Boolean(singleHeldOrder);
+  const canHold = cart.length > 0 && !isResumedOrder && !hasHeldOrder;
+
+  useEffect(() => {
+    offlineStorage.saveHeldOrders(singleHeldOrder ? [singleHeldOrder] : []);
+  }, [singleHeldOrder]);
 
   // Offline Detection & Sync
   const [isOnline, setIsOnline] = useState<boolean>(true);
@@ -493,24 +533,12 @@ export default function PosRegisterPage() {
     }
   }, [showNotification]);
 
-  // Held Orders & Completed History
-  const [heldOrders, setHeldOrders] = useState<HeldOrder[]>(() => {
-    if (typeof window !== "undefined") {
-      return offlineStorage.loadHeldOrders<HeldOrder[]>() || [];
-    }
-    return [];
-  });
-
   const [completedOrders, setCompletedOrders] = useState<CompletedOrderRecord[]>(() => {
     if (typeof window !== "undefined") {
       return offlineStorage.loadCompletedOrders<CompletedOrderRecord[]>() || [];
     }
     return [];
   });
-
-  useEffect(() => {
-    offlineStorage.saveHeldOrders(heldOrders);
-  }, [heldOrders]);
 
   useEffect(() => {
     offlineStorage.saveCompletedOrders(completedOrders);
@@ -526,7 +554,6 @@ export default function PosRegisterPage() {
   const [showCouponModal, setShowCouponModal] = useState<boolean>(false);
   const [couponCode, setCouponCode] = useState<string>("");
   const [couponError, setCouponError] = useState<string | null>(null);
-  const [showHeldOrdersModal, setShowHeldOrdersModal] = useState<boolean>(false);
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
   const [showOperationsModal, setShowOperationsModal] = useState<boolean>(false);
   const [showCashierModal, setShowCashierModal] = useState<boolean>(false);
@@ -731,44 +758,105 @@ export default function PosRegisterPage() {
     setSelectedCustomer(null);
     setReceiptChangeMode("ALL_KHR");
     setReceiptUSDInput("");
-    setTicketNumber(`T-${Math.floor(100 + Math.random() * 900)}`);
+    setIsResumedOrder(false);
+
+    // Auto-increment ticket sequence
+    const nextSeq = ticketSeq + 1;
+    setTicketSeq(nextSeq);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pos_ticket_seq", String(nextSeq));
+    }
+    setTicketNumber(`T-${nextSeq}`);
+
     setShowReceiptModal(true);
   };
 
-  const handleHoldCurrentOrder = () => {
-    if (cart.length === 0) return;
+  // 1-Tap Direct Hold (No prompts/tags, single held slot)
+  const handleDirectHoldOrder = () => {
+    if (cart.length === 0) {
+      soundFX.playWarning();
+      showNotification("Cart is Empty", "Add items to cart before putting ticket on hold.", "warning", 2000);
+      return;
+    }
+    if (hasHeldOrder) {
+      soundFX.playWarning();
+      showNotification("Hold Slot Full (Max 1)", "Only 1 held order allowed. Please resume or complete existing held order.", "warning", 2500);
+      return;
+    }
+    if (isResumedOrder) {
+      soundFX.playWarning();
+      showNotification("Cannot Re-Hold", "This order was already resumed and cannot be put on hold again.", "warning", 2500);
+      return;
+    }
+
     soundFX.playBlip(700);
+    const heldTicketNum = ticketNumber;
     const newHeld: HeldOrder = {
       id: `hold-${Date.now()}`,
-      tag: `Ticket ${ticketNumber} (${orderChannel}${selectedTable ? ` · ${selectedTable}` : ""})`,
+      ticketNumber: heldTicketNum,
+      tag: `Ticket #${heldTicketNum}`,
       cart: [...cart],
+      discountUSD,
       savedAt: new Date().toISOString(),
       channel: orderChannel,
       table: selectedTable || undefined,
       customer: selectedCustomer?.name || undefined,
     };
-    setHeldOrders((prev) => [newHeld, ...prev]);
+
+    setSingleHeldOrder(newHeld);
     dispatch({ type: "CLEAR" });
     setDiscountUSD(0);
     setSelectedTable(null);
-    setTicketNumber(`T-${Math.floor(100 + Math.random() * 900)}`);
-    showNotification("Order Held ⏸️", `Order parked in held drawer.`, "info");
+    setSelectedCustomer(null);
+    setIsResumedOrder(false);
+    setShowNonCashOptions(false);
+    setShowPromoOptions(false);
+
+    // Auto-increment ticket sequence for next order
+    const nextSeq = ticketSeq + 1;
+    setTicketSeq(nextSeq);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pos_ticket_seq", String(nextSeq));
+    }
+    setTicketNumber(`T-${nextSeq}`);
+
+    showNotification("Ticket Held ⏸️", `Ticket #${heldTicketNum} held`, "info", 2000);
   };
 
-  const handleResumeHeldOrder = (held: HeldOrder) => {
-    soundFX.playBlip(800);
-    dispatch({ type: "SET_CART", items: held.cart });
-    setOrderChannel(held.channel as "Walk-in" | "Takeaway" | "Delivery");
-    if (held.table) setSelectedTable(held.table);
-    setHeldOrders((prev) => prev.filter((o) => o.id !== held.id));
-    setShowHeldOrdersModal(false);
+  // 1-Tap Direct Resume Order
+  const handleDirectResumeOrder = () => {
+    if (!singleHeldOrder) return;
+
+    if (cart.length > 0) {
+      soundFX.playWarning();
+      showNotification(
+        "Active Cart In Use",
+        `Please complete or clear active cart before resuming Ticket #${singleHeldOrder.ticketNumber}.`,
+        "warning",
+        3000
+      );
+      return;
+    }
+
+    soundFX.playBlip(850);
+    dispatch({ type: "SET_CART", items: singleHeldOrder.cart });
+    setTicketNumber(singleHeldOrder.ticketNumber);
+    setDiscountUSD(singleHeldOrder.discountUSD || 0);
+    setOrderChannel((singleHeldOrder.channel as any) || "Walk-in");
+    if (singleHeldOrder.table) setSelectedTable(singleHeldOrder.table);
+    if (singleHeldOrder.customer) setSelectedCustomer({ id: "cust-resumed", name: singleHeldOrder.customer, phone: "", points: 0, tier: "Regular" });
+
+    setIsResumedOrder(true);
+    const resumedNum = singleHeldOrder.ticketNumber;
+    setSingleHeldOrder(null);
     setActiveNav("register");
-    showNotification("Order Resumed ▶️", `Restored ${held.cart.length} items to billing.`, "success");
+    showNotification("Ticket Resumed ▶️", `Ticket #${resumedNum} restored to cart`, "success", 2000);
   };
 
-  const handleDiscardHeldOrder = (id: string) => {
+  const handleDiscardHeldOrder = () => {
     soundFX.playBlip(600);
-    setHeldOrders((prev) => prev.filter((o) => o.id !== id));
+    setSingleHeldOrder(null);
+    showNotification("Held Ticket Discarded 🗑️", "Held order cleared from slot.", "info", 2000);
   };
 
   // Category-Aware Modifier Determination
@@ -969,6 +1057,50 @@ export default function PosRegisterPage() {
             {/* Orders / History Tab */}
             {activeNav === "orders" && (
               <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+                {/* Single Held Order Card if active */}
+                {hasHeldOrder && singleHeldOrder && (
+                  <div className="p-4 rounded-3xl bg-amber-50/90 border-2 border-amber-300 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-2.5 w-2.5 rounded-full bg-amber-500 animate-ping" />
+                        <span className="font-black text-xs text-amber-950 uppercase tracking-wide">
+                          Currently Held Ticket #{singleHeldOrder.ticketNumber}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                        {singleHeldOrder.savedAt ? new Date(singleHeldOrder.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-stone-700">
+                      {singleHeldOrder.cart.map((i) => `${i.qty}x ${i.name}`).join(", ")}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-amber-200">
+                      <span className="text-xs font-black text-amber-900">
+                        {formatUSD(singleHeldOrder.cart.reduce((s, i) => s + i.price * i.qty, 0))} ({formatKHRDirect(roundKHR(singleHeldOrder.cart.reduce((s, i) => s + i.price * i.qty, 0) * KHR_RATE))})
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleDiscardHeldOrder}
+                          className="px-3 py-1 rounded-xl bg-white border border-rose-200 text-rose-700 font-bold text-xs hover:bg-rose-50 cursor-pointer"
+                        >
+                          Discard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDirectResumeOrder}
+                          className="px-4 py-1 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        >
+                          <PlayCircle size={13} />
+                          <span>Resume Order</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                   <div>
                     <h2 className="text-base font-black text-stone-900">Completed Orders History</h2>
@@ -1264,9 +1396,9 @@ export default function PosRegisterPage() {
             >
               <div className="relative">
                 <ClipboardList size={16} className={activeNav === "orders" ? "stroke-[2.5]" : "stroke-[1.8]"} />
-                {heldOrders.length > 0 && (
+                {hasHeldOrder && (
                   <span className="absolute -top-1.5 -right-2.5 h-3 min-w-[12px] px-1 rounded-full bg-amber-600 text-white text-[8px] font-black flex items-center justify-center">
-                    {heldOrders.length}
+                    1
                   </span>
                 )}
               </div>
@@ -1719,8 +1851,14 @@ export default function PosRegisterPage() {
                     soundFX.playBlip(600);
                     if (activeItem) {
                       dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
+                      if (cart.length <= 1) {
+                        setIsResumedOrder(false);
+                        setDiscountUSD(0);
+                      }
                     } else {
                       dispatch({ type: "CLEAR" });
+                      setIsResumedOrder(false);
+                      setDiscountUSD(0);
                     }
                   }}
                   className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
@@ -1729,22 +1867,45 @@ export default function PosRegisterPage() {
                   <span>DELETE</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (heldOrders.length > 0 && cart.length === 0) {
-                      setShowHeldOrdersModal(true);
-                    } else {
-                      handleHoldCurrentOrder();
-                    }
-                  }}
-                  className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                    heldOrders.length > 0 ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
-                  }`}
-                >
-                  <PauseCircle size={13} className={heldOrders.length > 0 ? "text-amber-800" : "text-amber-700"} />
-                  <span>HOLD ({heldOrders.length})</span>
-                </button>
+                {/* HOLD / RESUME Button (1-Tap Single Hold Flow) */}
+                {hasHeldOrder ? (
+                  <button
+                    type="button"
+                    onClick={handleDirectResumeOrder}
+                    title={`Click to resume Ticket #${singleHeldOrder?.ticketNumber}`}
+                    className="h-11 sm:h-12 rounded-xl border border-amber-400 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs animate-pulse"
+                  >
+                    <PlayCircle size={13} className="text-amber-900" />
+                    <span>RESUME (1)</span>
+                  </button>
+                ) : isResumedOrder ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playWarning();
+                      showNotification("Cannot Re-Hold", "This order was already resumed and cannot be put on hold again.", "warning", 2500);
+                    }}
+                    title="Resumed tickets cannot be held again"
+                    className="h-11 sm:h-12 rounded-xl border border-stone-200 bg-stone-100 text-stone-400 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center cursor-not-allowed opacity-60 shadow-2xs"
+                  >
+                    <PauseCircle size={13} className="text-stone-400" />
+                    <span>HOLD (0)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleDirectHoldOrder}
+                    title={cart.length > 0 ? "Hold active ticket (1-tap)" : "Cart is empty"}
+                    className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                      cart.length > 0
+                        ? "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+                        : "bg-white border-stone-200 text-stone-400 hover:bg-stone-50"
+                    }`}
+                  >
+                    <PauseCircle size={13} className={cart.length > 0 ? "text-amber-700" : "text-stone-400"} />
+                    <span>HOLD (0)</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -2408,55 +2569,6 @@ export default function PosRegisterPage() {
               >
                 Remove Applied Coupon
               </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 5. Held Orders Drawer Modal */}
-      {showHeldOrdersModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl space-y-3 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-              <span className="text-xs font-black text-stone-900">Held Orders Drawer ({heldOrders.length})</span>
-              <button type="button" onClick={() => setShowHeldOrdersModal(false)} className="text-stone-400 text-xs font-bold">
-                ✕
-              </button>
-            </div>
-
-            {heldOrders.length === 0 ? (
-              <div className="py-8 text-center text-stone-400 text-xs">No orders currently on hold.</div>
-            ) : (
-              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                {heldOrders.map((h) => (
-                  <div key={h.id} className="p-3 rounded-2xl bg-stone-50 border border-stone-200 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-stone-900">{h.tag}</span>
-                      <span className="text-[11px] font-black text-amber-900">
-                        {formatUSD(h.cart.reduce((s, i) => s + i.price * i.qty, 0) * 1.1)}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-stone-500 line-clamp-1">{h.cart.map((i) => `${i.qty}x ${i.name}`).join(", ")}</p>
-                    <div className="flex gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => handleDiscardHeldOrder(h.id)}
-                        className="flex-1 py-1.5 rounded-xl bg-rose-50 text-rose-700 text-[10px] font-black"
-                      >
-                        Discard
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleResumeHeldOrder(h)}
-                        className="flex-2 py-1.5 rounded-xl text-white text-[10px] font-black shadow-xs"
-                        style={{ background: "#4A2E1F" }}
-                      >
-                        Resume Order →
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         </div>
