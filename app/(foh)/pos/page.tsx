@@ -1310,17 +1310,7 @@ export default function PosRegisterPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-stone-900">Ticket #{ticketNumber}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                    validateCartForCheckout(cart).valid && cart.length > 0
-                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                      : cart.length > 0
-                      ? "bg-amber-50 text-amber-800 border border-amber-300"
-                      : "bg-stone-100 text-stone-500"
-                  }`}
-                >
-                  {cart.length === 0 ? "Empty" : validateCartForCheckout(cart).valid ? "Ready" : "Incomplete ⚠️"}
-                </span>
+                <span className="text-[10px] font-medium text-stone-400">({cart.length} {cart.length === 1 ? "item" : "items"})</span>
               </div>
 
               {cart.length > 0 && (
@@ -1357,16 +1347,16 @@ export default function PosRegisterPage() {
             </div>
           </div>
 
-          {/* ── Table Column Headers (Strict Pixel Alignment) ── */}
-          <div className="shrink-0 px-3 py-1 bg-stone-100/80 border-b border-stone-200/80 flex items-center justify-between text-[10px] font-black text-stone-500 uppercase tracking-wider">
-            <span className="flex-1 min-w-0 pr-2">Product</span>
-            <span className="w-12 text-right">Price</span>
-            <span className="w-20 text-center">Qty</span>
-            <span className="w-14 text-right">Amount</span>
+          {/* ── Flat Spreadsheet Table Headers ── */}
+          <div className="shrink-0 px-3 py-2 bg-stone-50/80 border-b border-stone-200/80 flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+            <span className="flex-1">PRODUCT</span>
+            <span className="w-16 text-right">PRICE</span>
+            <span className="w-14 text-center">QTY</span>
+            <span className="w-20 text-right">AMOUNT</span>
           </div>
 
-          {/* ── Table Rows with Precision Alignment & Swipe-to-Delete ── */}
-          <div className="flex-1 overflow-y-auto px-2 py-1 min-h-0 space-y-1">
+          {/* ── Table Rows: Clean, Flat Spreadsheet Layout (No Bulky Cards) ── */}
+          <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-stone-100">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center py-12 text-stone-300">
                 <ShoppingCart size={32} className="mb-2 stroke-[1.5]" />
@@ -1377,8 +1367,6 @@ export default function PosRegisterPage() {
               <AnimatePresence initial={false}>
                 {cart.map((item) => {
                   const isSelected = activeCartId === item.cartId;
-                  const missing = getMissingModifiers(item);
-                  const isMissing = missing.length > 0;
                   const modifierSummary = [
                     item.notes,
                     item.size,
@@ -1395,11 +1383,11 @@ export default function PosRegisterPage() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -80 }}
-                      className="relative overflow-hidden rounded-xl bg-rose-600 shadow-2xs"
+                      className="relative overflow-hidden bg-rose-600"
                     >
-                      {/* Swipe-to-delete red background action */}
+                      {/* Swipe-to-delete action */}
                       <div
-                        className="absolute inset-y-0 right-0 w-20 flex items-center justify-center text-white text-xs font-black cursor-pointer"
+                        className="absolute inset-y-0 right-0 w-20 flex items-center justify-center text-white text-xs font-black cursor-pointer z-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           soundFX.playBlip(600);
@@ -1424,63 +1412,42 @@ export default function PosRegisterPage() {
                           soundFX.playBlip(950);
                           setActiveCartId(item.cartId);
                         }}
-                        className={`relative z-10 py-2 px-2.5 transition-all cursor-pointer flex items-center justify-between border ${
+                        className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer ${
                           isSelected
-                            ? "bg-amber-50/90 border-[#4A2E1F]/40"
-                            : "bg-white border-stone-200/80 hover:bg-stone-50"
+                            ? "bg-[#4A2E1F]/5 text-[#4A2E1F] border-l-4 border-[#4A2E1F]"
+                            : "bg-white hover:bg-stone-50/80 border-l-4 border-transparent"
                         }`}
                       >
-                        {/* 1. Product Name & Modifiers */}
+                        {/* PRODUCT (flex-1) */}
                         <div className="flex-1 min-w-0 pr-2">
-                          <div className="flex items-center gap-1.5">
-                            {isMissing && (
-                              <span
-                                className="h-2 w-2 rounded-full bg-rose-500 shrink-0 inline-block animate-pulse"
-                                title={`Missing: ${missing.join(", ")}`}
-                              />
-                            )}
-                            <span className="text-xs font-black text-stone-900 truncate leading-tight block">
-                              {item.name}
-                            </span>
-                          </div>
-                          {/* Indented Muted Modifiers */}
-                          <span className="text-[10px] text-stone-500 font-medium truncate block mt-0.5">
-                            {modifierSummary || (isMissing ? "⚠️ Modifiers required" : "Regular")}
+                          <span
+                            className={`text-xs md:text-sm font-semibold truncate block leading-tight ${
+                              isSelected ? "text-[#4A2E1F]" : "text-stone-900"
+                            }`}
+                          >
+                            {item.name}
+                          </span>
+                          <span className="text-[11px] text-stone-500 font-normal truncate block mt-0.5">
+                            {modifierSummary || "Regular"}
                           </span>
                         </div>
 
-                        {/* 2. Unit Price */}
-                        <div className="w-12 text-right text-[11px] font-semibold text-stone-500 shrink-0">
+                        {/* PRICE (w-16 text-right) */}
+                        <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0">
                           {formatUSD(item.price)}
                         </div>
 
-                        {/* 3. Quantity Stepper */}
-                        <div className="w-20 flex items-center justify-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              soundFX.playBlip(750);
-                              dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: item.qty - 1 });
-                            }}
-                            className="h-5 w-5 rounded bg-stone-100 text-stone-700 font-black text-xs flex items-center justify-center hover:bg-stone-200"
-                          >
-                            −
-                          </button>
-                          <span className="text-xs font-black text-stone-900 w-4 text-center">{item.qty}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              soundFX.playBlip(880);
-                              dispatch({ type: "UPDATE_QTY", cartId: item.cartId, qty: item.qty + 1 });
-                            }}
-                            className="h-5 w-5 rounded bg-stone-100 text-stone-700 font-black text-xs flex items-center justify-center hover:bg-stone-200"
-                          >
-                            +
-                          </button>
+                        {/* QTY (w-14 text-center) */}
+                        <div className="w-14 text-center text-xs md:text-sm font-bold text-stone-800 shrink-0">
+                          {item.qty}
                         </div>
 
-                        {/* 4. Line Amount */}
-                        <div className="w-14 text-right text-xs font-black text-stone-900 shrink-0">
+                        {/* AMOUNT (w-20 text-right) */}
+                        <div
+                          className={`w-20 text-right text-xs md:text-sm font-bold shrink-0 ${
+                            isSelected ? "text-[#4A2E1F]" : "text-stone-900"
+                          }`}
+                        >
                           {formatUSD(item.price * item.qty)}
                         </div>
                       </motion.div>
@@ -2272,26 +2239,35 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* Mandatory Modifier Toast */}
-      {validationToast && (
-        <div className="fixed top-15 right-5 z-[80] flex items-start gap-3 rounded-2xl bg-rose-600 px-4 py-3 text-white shadow-2xl border border-rose-400 animate-in slide-in-from-top-3 duration-200 max-w-sm">
-          <AlertCircle size={20} className="shrink-0 mt-0.5" />
-          <div className="flex-1 text-xs">
-            <p className="font-black text-white">Validation Error</p>
-            <p className="text-rose-100 mt-0.5 leading-snug">
-              Failed: <strong className="text-white underline">{validationToast.itemName}</strong> must have the following required condiments:{" "}
-              <span className="font-bold text-amber-200">{validationToast.missingText}</span>.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setValidationToast(null)}
-            className="text-white/80 hover:text-white text-xs font-bold ml-1"
+      {/* Top Animated Toast Validation on Payment Attempt */}
+      <AnimatePresence>
+        {validationToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 rounded-2xl bg-stone-900/95 text-white px-5 py-3 shadow-2xl border border-stone-700/80 backdrop-blur-md max-w-lg"
           >
-            ✕
-          </button>
-        </div>
-      )}
+            <div className="h-7 w-7 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <AlertTriangle size={16} />
+            </div>
+            <div className="flex-1 text-xs">
+              <p className="font-semibold text-stone-200 leading-snug">
+                Failed: <span className="text-amber-300 font-bold">{validationToast.itemName}</span> must have the following required condiments:{" "}
+                <span className="text-rose-300 font-bold">{validationToast.missingText}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setValidationToast(null)}
+              className="text-stone-400 hover:text-white text-xs font-bold ml-1 cursor-pointer transition-colors"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* General Toast */}
       {generalToast && (
