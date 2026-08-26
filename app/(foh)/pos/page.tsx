@@ -37,6 +37,8 @@ import {
   DollarSign,
   CreditCard,
   ArrowLeft,
+  Ticket,
+  Percent,
 } from "lucide-react";
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
@@ -516,10 +518,14 @@ export default function PosRegisterPage() {
 
   // Modals & Inline Keypad Panels
   const [showNonCashOptions, setShowNonCashOptions] = useState<boolean>(false);
+  const [showPromoOptions, setShowPromoOptions] = useState<boolean>(false);
   const [showCashModal, setShowCashModal] = useState<boolean>(false);
   const [showKHQRModal, setShowKHQRModal] = useState<boolean>(false);
   const [showQtyModal, setShowQtyModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
+  const [showCouponModal, setShowCouponModal] = useState<boolean>(false);
+  const [couponCode, setCouponCode] = useState<string>("");
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [showHeldOrdersModal, setShowHeldOrdersModal] = useState<boolean>(false);
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
   const [showOperationsModal, setShowOperationsModal] = useState<boolean>(false);
@@ -644,9 +650,11 @@ export default function PosRegisterPage() {
       setActiveCashField("KHR");
       setCustomUSDChange(null);
       setShowNonCashOptions(false);
+      setShowPromoOptions(false);
       setShowCashModal(true);
       soundFX.playBlip(780);
     } else if (method === "PAYMENT") {
+      setShowPromoOptions(false);
       setShowNonCashOptions(true);
       soundFX.playBlip(780);
     } else if (method === "KITCHEN") {
@@ -714,7 +722,9 @@ export default function PosRegisterPage() {
 
     setShowCashModal(false);
     setShowNonCashOptions(false);
+    setShowPromoOptions(false);
     setShowKHQRModal(false);
+    setShowCouponModal(false);
     dispatch({ type: "CLEAR" });
     setDiscountUSD(0);
     setSelectedTable(null);
@@ -1581,6 +1591,48 @@ export default function PosRegisterPage() {
                   <span>← Back to Actions</span>
                 </button>
               </div>
+            ) : showPromoOptions ? (
+              <div className="grid grid-cols-4 gap-1.5 animate-in fade-in duration-150">
+                {/* Row 1: Promotion & Coupon (2 cols each, exact matching button height) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(880);
+                    setShowPromoOptions(false);
+                    setShowPromoModal(true);
+                  }}
+                  className="col-span-2 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-xs uppercase shadow-2xs active:scale-95 transition-all cursor-pointer bg-amber-700 hover:bg-amber-800"
+                >
+                  <Percent size={15} />
+                  <span>Promotion</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(880);
+                    setShowPromoOptions(false);
+                    setShowCouponModal(true);
+                  }}
+                  className="col-span-2 h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <Ticket size={15} />
+                  <span>Coupon</span>
+                </button>
+
+                {/* Row 2: Back Button (4 cols full-width, exact matching button height) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(750);
+                    setShowPromoOptions(false);
+                  }}
+                  className="col-span-4 h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={14} />
+                  <span>← Back to Actions</span>
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-4 gap-1.5">
                 {/* Row 1 */}
@@ -1620,15 +1672,21 @@ export default function PosRegisterPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (cart.length === 0) {
+                      soundFX.playWarning();
+                      showNotification("Cart is Empty", "Add items to cart before selecting promotion or coupon.", "warning");
+                      return;
+                    }
                     soundFX.playBlip(800);
-                    setShowPromoModal(true);
+                    setShowNonCashOptions(false);
+                    setShowPromoOptions(true);
                   }}
                   className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
                     discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
                   }`}
                 >
                   <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
-                  <span>PROMO</span>
+                  <span>PROMOTION</span>
                 </button>
 
                 {/* Row 2 */}
@@ -2223,12 +2281,132 @@ export default function PosRegisterPage() {
               <button
                 type="button"
                 onClick={() => {
+                  soundFX.playBlip(600);
                   setDiscountUSD(0);
                   setShowPromoModal(false);
                 }}
-                className="w-full py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-black hover:bg-rose-100"
+                className="w-full py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black hover:bg-rose-100 transition-colors cursor-pointer"
               >
                 Remove Discount
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4b. Coupon Modal */}
+      {showCouponModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
+              <span className="text-xs font-black text-stone-900 flex items-center gap-1.5 uppercase tracking-wider">
+                <Ticket size={16} className="text-amber-700" /> Redeem Coupon
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCouponModal(false);
+                  setCouponError(null);
+                }}
+                className="text-stone-400 hover:text-stone-700 text-xs font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-stone-600 block">Enter Coupon / Voucher Code</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    setCouponError(null);
+                  }}
+                  placeholder="e.g. WELCOME10, VIP20"
+                  className="flex-1 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200 text-sm font-bold text-stone-900 uppercase focus:outline-none focus:ring-2 focus:ring-amber-800/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = couponCode.trim().toUpperCase();
+                    if (!code) return;
+                    soundFX.playBlip(900);
+                    if (code === "WELCOME10" || code === "CAFE10") {
+                      setDiscountUSD(rawSubtotal * 0.1);
+                      showNotification("Coupon Applied! 🎟️", "10% Welcome Discount applied.", "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
+                    } else if (code === "VIP20" || code === "SUMMER20") {
+                      setDiscountUSD(rawSubtotal * 0.2);
+                      showNotification("VIP Coupon Applied! 🌟", "20% VIP Discount applied.", "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
+                    } else if (code === "SAVE1" || code === "COFFEE1") {
+                      setDiscountUSD(Math.min(rawSubtotal, 1.0));
+                      showNotification("Coupon Applied! ☕", "$1.00 Voucher Discount applied.", "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
+                    } else if (code === "SAVE2" || code === "VIPFREE") {
+                      setDiscountUSD(Math.min(rawSubtotal, 2.0));
+                      showNotification("Coupon Applied! 🎁", "$2.00 Voucher Discount applied.", "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
+                    } else {
+                      soundFX.playWarning();
+                      setCouponError("Invalid or expired coupon code");
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs uppercase transition-all shadow-2xs cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+              {couponError && <p className="text-[11px] font-bold text-rose-600">{couponError}</p>}
+            </div>
+
+            {/* Quick Available Coupons */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider">Quick Select Coupons</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { code: "WELCOME10", label: "Welcome 10% Off", disc: rawSubtotal * 0.1 },
+                  { code: "VIP20", label: "VIP Club 20% Off", disc: rawSubtotal * 0.2 },
+                  { code: "SAVE1", label: "$1.00 Voucher", disc: 1.0 },
+                  { code: "SAVE2", label: "$2.00 Voucher", disc: 2.0 },
+                ].map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => {
+                      soundFX.playBlip(900);
+                      setDiscountUSD(Math.min(rawSubtotal, c.disc));
+                      showNotification(`Coupon Applied (${c.code})! 🎟️`, `${c.label} applied to order.`, "success");
+                      setShowCouponModal(false);
+                      setCouponCode("");
+                    }}
+                    className="p-2.5 rounded-xl bg-stone-50 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 text-left transition-all cursor-pointer"
+                  >
+                    <div className="text-xs font-black text-stone-900">{c.code}</div>
+                    <div className="text-[10px] font-medium text-stone-500">{c.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {discountUSD > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundFX.playBlip(600);
+                  setDiscountUSD(0);
+                  setShowCouponModal(false);
+                  setCouponCode("");
+                }}
+                className="w-full py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-black text-xs hover:bg-rose-100 transition-colors cursor-pointer"
+              >
+                Remove Applied Coupon
               </button>
             )}
           </div>
