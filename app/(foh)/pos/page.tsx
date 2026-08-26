@@ -1067,13 +1067,13 @@ export default function PosRegisterPage() {
                 <span className="text-[10px] text-stone-400 font-medium">1 Row Per Group · Equal Width Buttons</span>
               </div>
 
-              {/* Multi-Row Grid Stack with UNIFORM BUTTON SIZES (grid-cols-5) */}
+              {/* Multi-Row Grid Stack with SHORTER, COMPACT BUTTON SIZES (grid-cols-5 max-w-xl) */}
               {activeIsBeverage ? (
                 <div className="flex flex-col gap-1.5">
                   {/* Row 1 — Temp */}
                   <div className="flex items-center gap-2">
                     <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Temp:</span>
-                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                    <div className="grid grid-cols-5 gap-1.5 w-full max-w-xl">
                       {["Hot", "Iced"].map((temp) => {
                         const isSel = activeItem.notes === temp;
                         return (
@@ -1081,7 +1081,7 @@ export default function PosRegisterPage() {
                             key={temp}
                             type="button"
                             onClick={() => handleSelectModifierChip("notes", temp)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
                               isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                             }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
@@ -1096,7 +1096,7 @@ export default function PosRegisterPage() {
                   {/* Row 2 — Size */}
                   <div className="flex items-center gap-2">
                     <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Size:</span>
-                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                    <div className="grid grid-cols-5 gap-1.5 w-full max-w-xl">
                       {[
                         { val: "Small ($0.00)", label: "Small ($0.00)" },
                         { val: "Medium (+$0.30)", label: "Medium (+$0.30)" },
@@ -1108,7 +1108,7 @@ export default function PosRegisterPage() {
                             key={s.val}
                             type="button"
                             onClick={() => handleSelectModifierChip("size", s.val)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                            className={`h-8 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center px-1.5 truncate ${
                               isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                             }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
@@ -1123,7 +1123,7 @@ export default function PosRegisterPage() {
                   {/* Row 3 — Sugar */}
                   <div className="flex items-center gap-2">
                     <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Sugar:</span>
-                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                    <div className="grid grid-cols-5 gap-1.5 w-full max-w-xl">
                       {["0%", "30%", "50%", "70%", "100%"].map((sg) => {
                         const isSel = activeItem.sweetness === sg;
                         return (
@@ -1131,7 +1131,7 @@ export default function PosRegisterPage() {
                             key={sg}
                             type="button"
                             onClick={() => handleSelectModifierChip("sweetness", sg)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
                               isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                             }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
@@ -1146,7 +1146,7 @@ export default function PosRegisterPage() {
                   {/* Row 4 — Ice */}
                   <div className="flex items-center gap-2">
                     <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Ice:</span>
-                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                    <div className="grid grid-cols-5 gap-1.5 w-full max-w-xl">
                       {["No Ice", "Less Ice", "Normal Ice", "Extra Ice"].map((ic) => {
                         const isSel = activeItem.ice === ic;
                         return (
@@ -1154,7 +1154,7 @@ export default function PosRegisterPage() {
                             key={ic}
                             type="button"
                             onClick={() => handleSelectModifierChip("ice", ic)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
                               isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                             }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
@@ -1171,7 +1171,7 @@ export default function PosRegisterPage() {
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Warm Up:</span>
-                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                    <div className="grid grid-cols-5 gap-1.5 w-full max-w-xl">
                       {["Warm Up", "No Warm Up"].map((w) => {
                         const isSel = activeItem.notes === w;
                         return (
@@ -1179,7 +1179,7 @@ export default function PosRegisterPage() {
                             key={w}
                             type="button"
                             onClick={() => handleSelectModifierChip("notes", w)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
                               isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
                             }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
