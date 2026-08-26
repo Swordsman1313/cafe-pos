@@ -1535,160 +1535,160 @@ export default function PosRegisterPage() {
             </div>
           </div>
 
-          {/* ── Action Keypad Grid (2 Rows × 4 Columns layout preserved) ── */}
+          {/* ── Action Keypad (Flush at bottom right corner) ── */}
           <div className="shrink-0 p-2.5 bg-stone-100/95 border-t border-stone-200">
-            <div className="grid grid-cols-4 gap-1.5">
-              {/* Row 1 */}
-              <button
-                type="button"
-                onClick={() => handleInitiatePayment("CASH")}
-                className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-              >
-                <Banknote size={14} />
-                <span>CASH</span>
-              </button>
+            {showNonCashOptions ? (
+              <div className="grid grid-cols-4 gap-1.5 animate-in fade-in duration-150">
+                {/* Row 1: Payment Options (2 cols each, exact matching button height) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(880);
+                    setShowNonCashOptions(false);
+                    setKhqrTimer(120);
+                    setShowKHQRModal(true);
+                  }}
+                  className="col-span-2 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2 text-white font-bold text-xs uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                  style={{ background: "#4A2E1F" }}
+                >
+                  <QrCode size={16} />
+                  <span>Bakong KHQR</span>
+                </button>
 
-              {showNonCashOptions ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip(880);
-                      setShowNonCashOptions(false);
-                      setKhqrTimer(120);
-                      setShowKHQRModal(true);
-                    }}
-                    className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                    style={{ background: "#4A2E1F" }}
-                  >
-                    <QrCode size={14} />
-                    <span>KHQR</span>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(880);
+                    setShowNonCashOptions(false);
+                    handleCompleteSale("CREDIT CARD");
+                  }}
+                  className="col-span-2 h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <CreditCard size={16} />
+                  <span>Credit Card</span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip(880);
-                      setShowNonCashOptions(false);
-                      handleCompleteSale("CREDIT CARD");
-                    }}
-                    className="h-11 sm:h-12 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center shadow-2xs active:scale-95 transition-all cursor-pointer"
-                  >
-                    <CreditCard size={14} />
-                    <span>CARD</span>
-                  </button>
+                {/* Row 2: Back Button (4 cols full-width, exact matching button height) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(750);
+                    setShowNonCashOptions(false);
+                  }}
+                  className="col-span-4 h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={14} />
+                  <span>← Back to Actions</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-1.5">
+                {/* Row 1 */}
+                <button
+                  type="button"
+                  onClick={() => handleInitiatePayment("CASH")}
+                  className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <Banknote size={14} />
+                  <span>CASH</span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip(750);
-                      setShowNonCashOptions(false);
-                    }}
-                    className="h-11 sm:h-12 rounded-xl bg-white border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center shadow-2xs active:scale-95 transition-all cursor-pointer"
-                  >
-                    <ArrowLeft size={13} />
-                    <span>BACK</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleInitiatePayment("PAYMENT")}
-                    className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                    style={{ background: "#4A2E1F" }}
-                  >
-                    <QrCode size={14} />
-                    <span>PAYMENT</span>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => handleInitiatePayment("PAYMENT")}
+                  className="h-11 sm:h-12 rounded-xl flex flex-col items-center justify-center text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                  style={{ background: "#4A2E1F" }}
+                >
+                  <QrCode size={14} />
+                  <span>PAYMENT</span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!activeItem) return;
-                      soundFX.playBlip(800);
-                      setQtyInput("");
-                      setShowQtyModal(true);
-                    }}
-                    className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-                  >
-                    <Hash size={13} className="text-amber-800" />
-                    <span>QUANTITY</span>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!activeItem) return;
+                    soundFX.playBlip(800);
+                    setQtyInput("");
+                    setShowQtyModal(true);
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Hash size={13} className="text-amber-800" />
+                  <span>QUANTITY</span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip(800);
-                      setShowPromoModal(true);
-                    }}
-                    className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                      discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
-                    }`}
-                  >
-                    <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
-                    <span>PROMO</span>
-                  </button>
-                </>
-              )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(800);
+                    setShowPromoModal(true);
+                  }}
+                  className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                    discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
+                  }`}
+                >
+                  <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
+                  <span>PROMO</span>
+                </button>
 
-              {/* Row 2 */}
-              <button
-                type="button"
-                onClick={() => handleInitiatePayment("KITCHEN")}
-                className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-teal-700 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Send size={13} className="text-teal-700" />
-                <span>KITCHEN</span>
-              </button>
+                {/* Row 2 */}
+                <button
+                  type="button"
+                  onClick={() => handleInitiatePayment("KITCHEN")}
+                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-teal-700 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Send size={13} className="text-teal-700" />
+                  <span>KITCHEN</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(800);
-                  try {
-                    window.print();
-                  } catch {}
-                }}
-                className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Printer size={13} className="text-stone-600" />
-                <span>PRINT</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(800);
+                    try {
+                      window.print();
+                    } catch {}
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Printer size={13} className="text-stone-600" />
+                  <span>PRINT</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFX.playBlip(600);
-                  if (activeItem) {
-                    dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
-                  } else {
-                    dispatch({ type: "CLEAR" });
-                  }
-                }}
-                className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-              >
-                <Trash2 size={13} />
-                <span>DELETE</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playBlip(600);
+                    if (activeItem) {
+                      dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
+                    } else {
+                      dispatch({ type: "CLEAR" });
+                    }
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Trash2 size={13} />
+                  <span>DELETE</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (heldOrders.length > 0 && cart.length === 0) {
-                    setShowHeldOrdersModal(true);
-                  } else {
-                    handleHoldCurrentOrder();
-                  }
-                }}
-                className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                  heldOrders.length > 0 ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
-                }`}
-              >
-                <PauseCircle size={13} className={heldOrders.length > 0 ? "text-amber-800" : "text-amber-700"} />
-                <span>HOLD ({heldOrders.length})</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (heldOrders.length > 0 && cart.length === 0) {
+                      setShowHeldOrdersModal(true);
+                    } else {
+                      handleHoldCurrentOrder();
+                    }
+                  }}
+                  className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
+                    heldOrders.length > 0 ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+                  }`}
+                >
+                  <PauseCircle size={13} className={heldOrders.length > 0 ? "text-amber-800" : "text-amber-700"} />
+                  <span>HOLD ({heldOrders.length})</span>
+                </button>
+              </div>
+            )}
           </div>
         </aside>
       </div>
