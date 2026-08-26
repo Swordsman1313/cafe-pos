@@ -1383,11 +1383,11 @@ export default function PosRegisterPage() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -80 }}
-                      className="relative overflow-hidden bg-rose-600"
+                      className="relative overflow-hidden"
                     >
-                      {/* Swipe-to-delete action */}
+                      {/* Bottom Layer (Delete action) */}
                       <div
-                        className="absolute inset-y-0 right-0 w-20 flex items-center justify-center text-white text-xs font-black cursor-pointer z-0"
+                        className="absolute inset-0 bg-red-600 flex items-center justify-end pr-4 text-white z-0 cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           soundFX.playBlip(600);
@@ -1397,7 +1397,7 @@ export default function PosRegisterPage() {
                         <Trash2 size={16} />
                       </div>
 
-                      {/* Foreground draggable row */}
+                      {/* Top Layer (Interactive row with solid opaque background) */}
                       <motion.div
                         drag="x"
                         dragConstraints={{ left: -75, right: 0 }}
@@ -1412,10 +1412,10 @@ export default function PosRegisterPage() {
                           soundFX.playBlip(950);
                           setActiveCartId(item.cartId);
                         }}
-                        className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer ${
+                        className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
                           isSelected
-                            ? "bg-[#4A2E1F]/5 text-[#4A2E1F] border-l-4 border-[#4A2E1F]"
-                            : "bg-white hover:bg-stone-50/80 border-l-4 border-transparent"
+                            ? "bg-[#F7F2EE] text-[#4A2E1F] border-l-4 border-[#4A2E1F]"
+                            : "bg-white hover:bg-stone-50 border-l-4 border-transparent"
                         }`}
                       >
                         {/* PRODUCT (flex-1) */}
