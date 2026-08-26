@@ -1381,7 +1381,8 @@ export default function PosRegisterPage() {
             ) : (
               <AnimatePresence initial={false}>
                 {cart.map((item) => {
-                  const isSelected = activeCartId === item.cartId;
+                  const effectiveActiveId = activeCartId || (cart.length > 0 ? cart[cart.length - 1].cartId : null);
+                  const isSelected = effectiveActiveId === item.cartId;
                   const modifierValues = [
                     item.notes,
                     item.size?.replace(/\s*\(\+\$0\.00\)/, ""),
@@ -1442,7 +1443,7 @@ export default function PosRegisterPage() {
                         className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
                           isSelected
                             ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
-                            : "bg-white hover:bg-stone-50 border-l-4 border-transparent"
+                            : "bg-white hover:bg-stone-50/90 border-l-4 border-transparent"
                         }`}
                       >
                         {/* PRODUCT (flex-1) */}
