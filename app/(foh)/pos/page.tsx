@@ -286,6 +286,36 @@ function cartReducer(state: CartItem[], action: CartAction): CartItem[] {
   }
 }
 
+/**
+ * Pure merge helper function that aggregates identical items (matching productId and modifiers),
+ * sums their quantities, and appends unique items.
+ */
+function mergeCartItems(currentCart: CartItem[], heldCart: CartItem[]): CartItem[] {
+  const merged: CartItem[] = currentCart.map((item) => ({ ...item }));
+
+  for (const heldItem of heldCart) {
+    const existingIndex = merged.findIndex(
+      (m) =>
+        m.productId === heldItem.productId &&
+        (m.size || "") === (heldItem.size || "") &&
+        (m.sweetness || "") === (heldItem.sweetness || "") &&
+        (m.ice || "") === (heldItem.ice || "") &&
+        (m.notes || "") === (heldItem.notes || "")
+    );
+
+    if (existingIndex >= 0) {
+      merged[existingIndex].qty += heldItem.qty;
+    } else {
+      merged.push({
+        ...heldItem,
+        cartId: `merged-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      });
+    }
+  }
+
+  return merged;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Validation Helpers                                                */
 /* ------------------------------------------------------------------ */
@@ -823,34 +853,69 @@ export default function PosRegisterPage() {
     showNotification("Ticket Held ⏸️", `Ticket #${heldTicketNum} held`, "info", 2000);
   };
 
-  // 1-Tap Direct Resume Order
-  const handleDirectResumeOrder = () => {
+  // 1-Tap Direct Resume with Auto-Merge Support
+  const handleResumeWithMerge = () => {
     if (!singleHeldOrder) return;
 
-    if (cart.length > 0) {
-      soundFX.playWarning();
+    soundFX.playBlip(850);
+    const held = singleHeldOrder;
+    const isCartActive = cart.length > 0;
+
+    if (isCartActive) {
+      // Auto-merge held items with active cart items
+      const mergedCart = mergeCartItems(cart, held.cart);
+      dispatch({ type: "SET_CART", items: mergedCart });
+      setDiscountUSD((prev) => prev + (held.discountUSD || 0));
+      if (!selectedTable && held.table) setSelectedTable(held.table);
+      if (!selectedCustomer && held.customer) {
+        setSelectedCustomer({ id: "cust-merged", name: held.customer, phone: "", points: 0, tier: "Regular" });
+      }
       showNotification(
-        "Active Cart In Use",
-        `Please complete or clear active cart before resuming Ticket #${singleHeldOrder.ticketNumber}.`,
-        "warning",
-        3000
+        "Orders Auto-Merged 🔀",
+        `Held Ticket #${held.ticketNumber} merged with active cart.`,
+        "success",
+        2500
       );
-      return;
+    } else {
+      // Restore held ticket directly into empty cart
+      dispatch({ type: "SET_CART", items: held.cart });
+      setTicketNumber(held.ticketNumber);
+      setDiscountUSD(held.discountUSD || 0);
+      setOrderChannel((held.channel as any) || "Walk-in");
+      if (held.table) setSelectedTable(held.table);
+      if (held.customer) {
+        setSelectedCustomer({ id: "cust-resumed", name: held.customer, phone: "", points: 0, tier: "Regular" });
+      }
+      showNotification(
+        "Ticket Resumed ▶️",
+        `Ticket #${held.ticketNumber} restored to cart.`,
+        "success",
+        2000
+      );
     }
 
-    soundFX.playBlip(850);
-    dispatch({ type: "SET_CART", items: singleHeldOrder.cart });
-    setTicketNumber(singleHeldOrder.ticketNumber);
-    setDiscountUSD(singleHeldOrder.discountUSD || 0);
-    setOrderChannel((singleHeldOrder.channel as any) || "Walk-in");
-    if (singleHeldOrder.table) setSelectedTable(singleHeldOrder.table);
-    if (singleHeldOrder.customer) setSelectedCustomer({ id: "cust-resumed", name: singleHeldOrder.customer, phone: "", points: 0, tier: "Regular" });
-
     setIsResumedOrder(true);
-    const resumedNum = singleHeldOrder.ticketNumber;
     setSingleHeldOrder(null);
     setActiveNav("register");
-    showNotification("Ticket Resumed ▶️", `Ticket #${resumedNum} restored to cart`, "success", 2000);
+  };
+
+  // Delete Handler with Lock Reset
+  const handleDeleteOrder = () => {
+    soundFX.playBlip(600);
+    if (activeItem) {
+      dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
+      // Reset isResumed so hold becomes active again
+      setIsResumedOrder(false);
+      if (cart.length <= 1) {
+        setDiscountUSD(0);
+      }
+      showNotification("Item Removed 🗑️", `${activeItem.name} removed from cart.`, "info", 1500);
+    } else {
+      dispatch({ type: "CLEAR" });
+      setIsResumedOrder(false);
+      setDiscountUSD(0);
+      showNotification("Cart Cleared 🗑️", "All items cleared from cart.", "info", 1500);
+    }
   };
 
   const handleDiscardHeldOrder = () => {
@@ -1090,7 +1155,7 @@ export default function PosRegisterPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={handleDirectResumeOrder}
+                          onClick={handleResumeWithMerge}
                           className="px-4 py-1 rounded-xl bg-[#4A2E1F] hover:bg-[#3d2417] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
                         >
                           <PlayCircle size={13} />
@@ -1847,32 +1912,19 @@ export default function PosRegisterPage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    soundFX.playBlip(600);
-                    if (activeItem) {
-                      dispatch({ type: "UPDATE_QTY", cartId: activeItem.cartId, qty: 0 });
-                      if (cart.length <= 1) {
-                        setIsResumedOrder(false);
-                        setDiscountUSD(0);
-                      }
-                    } else {
-                      dispatch({ type: "CLEAR" });
-                      setIsResumedOrder(false);
-                      setDiscountUSD(0);
-                    }
-                  }}
+                  onClick={handleDeleteOrder}
                   className="h-11 sm:h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
                 >
                   <Trash2 size={13} />
                   <span>DELETE</span>
                 </button>
 
-                {/* HOLD / RESUME Button (1-Tap Single Hold Flow) */}
+                {/* HOLD / RESUME Button (1-Tap Single Hold Flow with Auto-Merge) */}
                 {hasHeldOrder ? (
                   <button
                     type="button"
-                    onClick={handleDirectResumeOrder}
-                    title={`Click to resume Ticket #${singleHeldOrder?.ticketNumber}`}
+                    onClick={handleResumeWithMerge}
+                    title={`Click to resume / auto-merge Ticket #${singleHeldOrder?.ticketNumber}`}
                     className="h-11 sm:h-12 rounded-xl border border-amber-400 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs animate-pulse"
                   >
                     <PlayCircle size={13} className="text-amber-900" />
