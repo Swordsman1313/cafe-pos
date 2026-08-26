@@ -1385,7 +1385,7 @@ export default function PosRegisterPage() {
           <div className="shrink-0 px-3 py-2 bg-stone-50/80 border-b border-stone-200/80 flex items-center justify-between text-[11px] font-bold text-stone-500 uppercase tracking-wider">
             <span className="flex-1">PRODUCT</span>
             <span className="w-16 text-right">PRICE</span>
-            <span className="w-14 text-center">QTY</span>
+            <span className="w-12 text-center">QTY</span>
             <span className="w-20 text-right">AMOUNT</span>
           </div>
 
@@ -1401,30 +1401,26 @@ export default function PosRegisterPage() {
               <AnimatePresence initial={false}>
                 {cart.map((item) => {
                   const isSelected = activeCartId === item.cartId;
-                  const condimentLines: { label: string; value: string }[] = [];
-                  if (item.notes) {
-                    if (item.category === "pastries") {
-                      condimentLines.push({ label: "Warm Up", value: item.notes });
-                    } else {
-                      condimentLines.push({ label: "Temp", value: item.notes });
-                    }
-                  }
-                  if (item.size) {
-                    condimentLines.push({ label: "Size", value: item.size });
-                  }
-                  if (item.sweetness) {
-                    let sVal = item.sweetness;
-                    if (item.sweetness === "0%") sVal = "No Sugar (0%)";
-                    else if (item.sweetness === "30%") sVal = "Less Sweet (30%)";
-                    else if (item.sweetness === "50%") sVal = "Half Sweet (50%)";
-                    else if (item.sweetness === "70%") sVal = "70% Sugar";
-                    else if (item.sweetness === "100%") sVal = "Normal Sweet (100%)";
-                    else sVal = `${item.sweetness} Sugar`;
-                    condimentLines.push({ label: "Sugar", value: sVal });
-                  }
-                  if (item.ice) {
-                    condimentLines.push({ label: "Ice", value: item.ice });
-                  }
+                  const modifierValues = [
+                    item.notes,
+                    item.size?.replace(/\s*\(\+\$0\.00\)/, ""),
+                    item.sweetness === "0%"
+                      ? "No Sugar"
+                      : item.sweetness === "30%"
+                      ? "Less Sweet (30%)"
+                      : item.sweetness === "50%"
+                      ? "Half Sweet (50%)"
+                      : item.sweetness === "70%"
+                      ? "70% Sugar"
+                      : item.sweetness === "100%"
+                      ? "Normal Sweet"
+                      : item.sweetness
+                      ? `${item.sweetness} Sugar`
+                      : "",
+                    item.ice,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
 
                   return (
                     <motion.div
@@ -1462,7 +1458,7 @@ export default function PosRegisterPage() {
                           soundFX.playBlip(950);
                           setActiveCartId(item.cartId);
                         }}
-                        className={`relative z-10 flex items-start py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
+                        className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
                           isSelected
                             ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
                             : "bg-white hover:bg-stone-50 border-l-4 border-transparent"
@@ -1477,28 +1473,19 @@ export default function PosRegisterPage() {
                           >
                             {item.name}
                           </span>
-                          {condimentLines.length > 0 ? (
-                            <div className="text-[11px] text-stone-500 font-normal leading-tight pl-1.5 border-l border-stone-200 mt-1 space-y-0.5">
-                              {condimentLines.map((line, idx) => (
-                                <div key={idx} className="whitespace-normal break-words">
-                                  <span className="text-stone-400 font-medium">{line.label}:</span> {line.value}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-stone-400 font-normal block mt-0.5">Regular</span>
-                          )}
+                          <span className="text-[11px] text-stone-400 font-normal leading-tight mt-0.5 whitespace-normal break-words block">
+                            {modifierValues || "Regular"}
+                          </span>
                         </div>
 
                         {/* PRICE (w-16 text-right) */}
-                        <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0 self-start pt-0.5">
+                        <div className="w-16 text-right text-xs md:text-sm font-medium text-stone-600 shrink-0">
                           {formatUSD(item.price)}
                         </div>
 
-                        {/* QTY (w-14 text-center): Tap to +1, Hold (400ms) to open popover */}
-                        <div className="w-14 flex items-center justify-center shrink-0 self-start pt-0.5">
-                          <button
-                            type="button"
+                        {/* QTY (w-12 text-center): Seamless, blended text */}
+                        <div className="w-12 flex items-center justify-center shrink-0">
+                          <span
                             onMouseDown={() => handleQtyTouchStart(item)}
                             onMouseUp={handleQtyTouchEnd}
                             onMouseLeave={handleQtyTouchEnd}
@@ -1506,15 +1493,15 @@ export default function PosRegisterPage() {
                             onTouchEnd={handleQtyTouchEnd}
                             onClick={(e) => handleQtyClick(e, item)}
                             title="Tap to +1, Hold (400ms) to edit"
-                            className="h-6 min-w-[26px] px-2 rounded-lg bg-stone-100 hover:bg-stone-200 active:scale-95 text-stone-800 font-bold text-xs md:text-sm transition-all cursor-pointer flex items-center justify-center select-none"
+                            className="text-xs md:text-sm font-semibold text-stone-700 w-10 text-center py-1 cursor-pointer hover:text-stone-950 transition-colors select-none"
                           >
                             {item.qty}
-                          </button>
+                          </span>
                         </div>
 
-                        {/* AMOUNT (w-20 text-right) */}
+                        {/* AMOUNT (w-20 text-right font-bold) */}
                         <div
-                          className={`w-20 text-right text-xs md:text-sm font-bold shrink-0 self-start pt-0.5 ${
+                          className={`w-20 text-right text-xs md:text-sm font-bold shrink-0 ${
                             isSelected ? "text-stone-950 font-black" : "text-stone-900"
                           }`}
                         >
