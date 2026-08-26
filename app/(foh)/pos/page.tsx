@@ -35,7 +35,6 @@ import {
   Grid3X3,
   UserCheck,
   DollarSign,
-  Sparkles,
 } from "lucide-react";
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
@@ -400,7 +399,7 @@ export default function PosRegisterPage() {
   const [discountUSD, setDiscountUSD] = useState<number>(0);
 
   // Search & Category
-  const [query, setQuery] = useState<string>("" );
+  const [query, setQuery] = useState<string>("");
   const [category, setCategory] = useState<string>("all");
   const categoryScrollRef = useRef<HTMLDivElement>(null);
 
@@ -785,417 +784,527 @@ export default function PosRegisterPage() {
         </div>
       </header>
 
-      {/* ── Main Viewport Area (Catalog Workspace + Cart Sidebar) ──────── */}
+      {/* ── Main Split: Left Workspace + Right Full-Height Cart ──────── */}
       <div className="flex flex-1 min-h-0 w-full overflow-hidden">
-        {/* ── Left Workspace: High-Density Catalog & Stacked Modifier Panel ── */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden" style={{ background: "#FDFBF9" }}>
-          {activeNav === "register" && (
-            <>
-              {/* Category Pills & Quick Search */}
-              <div className="shrink-0 px-5 pt-2 pb-1.5 border-b border-stone-200/60 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-4">
-                <div className="flex items-center gap-1 flex-1 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => scrollCategories("left")}
-                    className="h-7.5 w-7.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
+        {/* ── LEFT WORKSPACE (Catalog + Modifier Drawer + Bottom Nav strictly confined to left!) ── */}
+        <div className="flex min-w-0 flex-1 flex-col h-full overflow-hidden border-r border-stone-200/80">
+          {/* Main Catalog View / Active Tab Content */}
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden" style={{ background: "#FDFBF9" }}>
+            {activeNav === "register" && (
+              <>
+                {/* Category Pills & Quick Search */}
+                <div className="shrink-0 px-5 pt-2 pb-1.5 border-b border-stone-200/60 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => scrollCategories("left")}
+                      className="h-7.5 w-7.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
 
-                  <div ref={categoryScrollRef} className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
-                    {CATEGORIES.map((cat) => {
-                      const Icon = cat.icon;
-                      const isActive = category === cat.id;
+                    <div ref={categoryScrollRef} className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
+                      {CATEGORIES.map((cat) => {
+                        const Icon = cat.icon;
+                        const isActive = category === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              soundFX.playBlip(900);
+                              setCategory(cat.id);
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-black text-xs transition-all border shrink-0 cursor-pointer ${
+                              isActive
+                                ? "text-white shadow-xs border-transparent"
+                                : "bg-white text-stone-600 border-stone-200/80 hover:border-stone-400 hover:bg-stone-50"
+                            }`}
+                            style={isActive ? { background: "#4A2E1F" } : {}}
+                          >
+                            <Icon size={12} />
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => scrollCategories("right")}
+                      className="h-7.5 w-7.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
+
+                  <div className="relative w-44 shrink-0">
+                    <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search menu..."
+                      className="h-7.5 w-full rounded-xl bg-stone-100/90 pl-8 pr-6 text-xs font-medium text-stone-800 outline-none transition-all placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-stone-800"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        onClick={() => setQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-[9px]"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── High-Density Product Grid: Compact Horizontal Tiles ── */}
+                <div className="flex-1 overflow-y-auto px-5 py-2 min-h-0">
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
+                    {filteredProducts.map((product) => {
+                      const ProductIcon = CATEGORY_ICON[product.category] || Coffee;
+                      const isCardActive = activeItem?.productId === product.id;
+
                       return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => {
-                            soundFX.playBlip(900);
-                            setCategory(cat.id);
-                          }}
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-black text-xs transition-all border shrink-0 cursor-pointer ${
-                            isActive
-                              ? "text-white shadow-xs border-transparent"
-                              : "bg-white text-stone-600 border-stone-200/80 hover:border-stone-400 hover:bg-stone-50"
+                        <div
+                          key={product.id}
+                          onClick={() => handleProductCardClick(product)}
+                          className={`group rounded-2xl border p-2 flex items-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer shadow-2xs ${
+                            isCardActive
+                              ? "bg-amber-50/70 border-[#4A2E1F] ring-1 ring-[#4A2E1F]"
+                              : "bg-white border-stone-200/90 hover:border-stone-400 hover:shadow-xs"
                           }`}
-                          style={isActive ? { background: "#4A2E1F" } : {}}
                         >
-                          <Icon size={12} />
-                          <span>{cat.label}</span>
-                        </button>
+                          {/* Square Thumbnail on Left */}
+                          <div
+                            className="h-11 w-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+                            style={{
+                              background:
+                                product.category === "espresso"
+                                  ? "linear-gradient(135deg, #784A30, #4A2E1F)"
+                                  : product.category === "tea"
+                                  ? "linear-gradient(135deg, #447755, #254733)"
+                                  : product.category === "frappe"
+                                  ? "linear-gradient(135deg, #4A7A9E, #234E6F)"
+                                  : "linear-gradient(135deg, #C28B5E, #8C5933)",
+                            }}
+                          >
+                            <ProductIcon size={18} />
+                          </div>
+
+                          {/* Title & Dual Price on Right */}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-black text-xs text-stone-900 leading-tight truncate group-hover:text-amber-950">
+                              {product.name}
+                            </h3>
+                            <div className="flex items-baseline gap-1.5 mt-0.5">
+                              <span className="text-xs font-black text-stone-900">{formatUSD(product.price)}</span>
+                              <span className="text-[10px] font-bold text-stone-400">
+                                {formatKHRDirect(roundKHR(product.price * KHR_RATE))}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => scrollCategories("right")}
-                    className="h-7.5 w-7.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
                 </div>
+              </>
+            )}
 
-                <div className="relative w-44 shrink-0">
-                  <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search menu..."
-                    className="h-7.5 w-full rounded-xl bg-stone-100/90 pl-8 pr-6 text-xs font-medium text-stone-800 outline-none transition-all placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-stone-800"
-                  />
-                  {query && (
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-[9px]"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* ── High-Density Product Grid: Compact Horizontal Tiles ── */}
-              <div className="flex-1 overflow-y-auto px-5 py-2 min-h-0">
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                  {filteredProducts.map((product) => {
-                    const ProductIcon = CATEGORY_ICON[product.category] || Coffee;
-                    const isCardActive = activeItem?.productId === product.id;
-
-                    return (
-                      <div
-                        key={product.id}
-                        onClick={() => handleProductCardClick(product)}
-                        className={`group rounded-2xl border p-2 flex items-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer shadow-2xs ${
-                          isCardActive
-                            ? "bg-amber-50/70 border-[#4A2E1F] ring-1 ring-[#4A2E1F]"
-                            : "bg-white border-stone-200/90 hover:border-stone-400 hover:shadow-xs"
-                        }`}
-                      >
-                        {/* Square Thumbnail on Left */}
-                        <div
-                          className="h-11 w-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
-                          style={{
-                            background:
-                              product.category === "espresso"
-                                ? "linear-gradient(135deg, #784A30, #4A2E1F)"
-                                : product.category === "tea"
-                                ? "linear-gradient(135deg, #447755, #254733)"
-                                : product.category === "frappe"
-                                ? "linear-gradient(135deg, #4A7A9E, #234E6F)"
-                                : "linear-gradient(135deg, #C28B5E, #8C5933)",
-                          }}
-                        >
-                          <ProductIcon size={18} />
-                        </div>
-
-                        {/* Title & Dual Price on Right */}
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-black text-xs text-stone-900 leading-tight truncate group-hover:text-amber-950">
-                            {product.name}
-                          </h3>
-                          <div className="flex items-baseline gap-1.5 mt-0.5">
-                            <span className="text-xs font-black text-stone-900">{formatUSD(product.price)}</span>
-                            <span className="text-[10px] font-bold text-stone-400">
-                              {formatKHRDirect(roundKHR(product.price * KHR_RATE))}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── Compact Multi-Row Modifier Panel (Sleek & Ergonomic) ── */}
-              {activeItem && (activeIsBeverage || activeIsPastry) && (
-                <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-5 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
-                  {/* Context Header */}
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Condiments:</span>
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-black text-white shadow-2xs" style={{ background: "#4A2E1F" }}>
-                        {activeItem.name} ({formatUSD(activeItem.price)})
-                      </span>
-                      {getMissingModifiers(activeItem).length > 0 && (
-                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          ⚠️ Required: {getMissingModifiers(activeItem).join(", ")}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-stone-400 font-medium">1 Row Per Group</span>
+            {/* Orders / History Tab */}
+            {activeNav === "orders" && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+                <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                  <div>
+                    <h2 className="text-base font-black text-stone-900">Completed Orders History</h2>
+                    <p className="text-xs text-stone-400">Synced cloud and offline sales records</p>
                   </div>
-
-                  {/* Multi-Row Vertical Stack */}
-                  {activeIsBeverage ? (
-                    <div className="flex flex-col gap-1.5">
-                      {/* Row 1 — Temp */}
-                      <div className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Temp:</span>
-                        <div className="flex flex-1 gap-1.5">
-                          {["Hot", "Iced"].map((temp) => {
-                            const isSel = activeItem.notes === temp;
-                            return (
-                              <button
-                                key={temp}
-                                type="button"
-                                onClick={() => handleSelectModifierChip("notes", temp)}
-                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                                }`}
-                                style={isSel ? { background: "#4A2E1F" } : {}}
-                              >
-                                {temp}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Row 2 — Size */}
-                      <div className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Size:</span>
-                        <div className="flex flex-1 gap-1.5">
-                          {[
-                            { val: "Small ($0.00)", label: "Small ($0.00)" },
-                            { val: "Medium (+$0.30)", label: "Medium (+$0.30)" },
-                            { val: "Large (+$0.60)", label: "Large (+$0.60)" },
-                          ].map((s) => {
-                            const isSel = activeItem.size === s.val;
-                            return (
-                              <button
-                                key={s.val}
-                                type="button"
-                                onClick={() => handleSelectModifierChip("size", s.val)}
-                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                                }`}
-                                style={isSel ? { background: "#4A2E1F" } : {}}
-                              >
-                                {s.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Row 3 — Sugar */}
-                      <div className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Sugar:</span>
-                        <div className="flex flex-1 gap-1">
-                          {["0%", "30%", "50%", "70%", "100%"].map((sg) => {
-                            const isSel = activeItem.sweetness === sg;
-                            return (
-                              <button
-                                key={sg}
-                                type="button"
-                                onClick={() => handleSelectModifierChip("sweetness", sg)}
-                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                                }`}
-                                style={isSel ? { background: "#4A2E1F" } : {}}
-                              >
-                                {sg}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Row 4 — Ice */}
-                      <div className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Ice:</span>
-                        <div className="flex flex-1 gap-1">
-                          {["No Ice", "Less Ice", "Normal Ice", "Extra Ice"].map((ic) => {
-                            const isSel = activeItem.ice === ic;
-                            return (
-                              <button
-                                key={ic}
-                                type="button"
-                                onClick={() => handleSelectModifierChip("ice", ic)}
-                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                                }`}
-                                style={isSel ? { background: "#4A2E1F" } : {}}
-                              >
-                                {ic}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Pastry Food Options */
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Warm Up:</span>
-                        <div className="flex flex-1 gap-1.5">
-                          {["Warm Up", "No Warm Up"].map((w) => {
-                            const isSel = activeItem.notes === w;
-                            return (
-                              <button
-                                key={w}
-                                type="button"
-                                onClick={() => handleSelectModifierChip("notes", w)}
-                                className={`flex-1 h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                                  isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                                }`}
-                                style={isSel ? { background: "#4A2E1F" } : {}}
-                              >
-                                {w}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <span className="text-xs font-black text-stone-700 bg-stone-100 px-3 py-1 rounded-full">
+                    {completedOrders.length} Orders
+                  </span>
                 </div>
-              )}
-            </>
-          )}
 
-          {/* Orders / History Tab */}
-          {activeNav === "orders" && (
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
-              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-                <div>
-                  <h2 className="text-base font-black text-stone-900">Completed Orders History</h2>
-                  <p className="text-xs text-stone-400">Synced cloud and offline sales records</p>
-                </div>
-                <span className="text-xs font-black text-stone-700 bg-stone-100 px-3 py-1 rounded-full">
-                  {completedOrders.length} Orders
-                </span>
+                {completedOrders.length === 0 ? (
+                  <div className="py-20 text-center text-stone-400 text-xs">No orders completed today yet.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {completedOrders.map((ord) => (
+                      <div key={ord.id} className="p-3.5 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="font-black text-xs text-stone-900">Ticket #{ord.ticketNumber}</span>
+                          <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            {formatUSD(ord.total)} ({formatKHRDirect(roundKHR(ord.total * KHR_RATE))})
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-stone-600 line-clamp-2">
+                          {ord.items.map((i) => `${i.qty}x ${i.name} (${i.modifiers || "Regular"})`).join(", ")}
+                        </p>
+                        <div className="flex justify-between text-[10px] text-stone-400 pt-1.5 border-t border-stone-100">
+                          <span>{ord.timestamp} · {ord.channel}</span>
+                          <span className="font-black uppercase text-stone-800">{ord.paymentMethod}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            )}
 
-              {completedOrders.length === 0 ? (
-                <div className="py-20 text-center text-stone-400 text-xs">No orders completed today yet.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {completedOrders.map((ord) => (
-                    <div key={ord.id} className="p-3.5 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <span className="font-black text-xs text-stone-900">Ticket #{ord.ticketNumber}</span>
-                        <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          {formatUSD(ord.total)} ({formatKHRDirect(roundKHR(ord.total * KHR_RATE))})
+            {/* Tables Seating Tab */}
+            {activeNav === "tables" && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+                <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                  <div>
+                    <h2 className="text-base font-black text-stone-900">Dine-In Table Seating Floor Plan</h2>
+                    <p className="text-xs text-stone-400">Assign table to current ticket</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {INITIAL_TABLES.map((tbl) => (
+                    <button
+                      key={tbl.id}
+                      type="button"
+                      onClick={() => {
+                        soundFX.playBlip();
+                        setSelectedTable(tbl.name);
+                        setActiveNav("register");
+                        showNotification("Table Assigned", `Ticket assigned to ${tbl.name}`, "info");
+                      }}
+                      className={`p-4 rounded-3xl border-2 text-left transition-all cursor-pointer ${
+                        selectedTable === tbl.name
+                          ? "border-[#4A2E1F] bg-amber-50"
+                          : tbl.status === "occupied"
+                          ? "border-amber-300 bg-amber-50/40"
+                          : tbl.status === "reserved"
+                          ? "border-indigo-200 bg-indigo-50/40"
+                          : "border-stone-200 bg-white hover:border-stone-400"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="font-black text-sm text-stone-900">{tbl.name}</span>
+                        <span
+                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            tbl.status === "occupied"
+                              ? "bg-amber-100 text-amber-800"
+                              : tbl.status === "reserved"
+                              ? "bg-indigo-100 text-indigo-800"
+                              : "bg-emerald-100 text-emerald-800"
+                          }`}
+                        >
+                          {tbl.status}
                         </span>
                       </div>
-                      <p className="text-[11px] text-stone-600 line-clamp-2">
-                        {ord.items.map((i) => `${i.qty}x ${i.name} (${i.modifiers || "Regular"})`).join(", ")}
-                      </p>
-                      <div className="flex justify-between text-[10px] text-stone-400 pt-1.5 border-t border-stone-100">
-                        <span>{ord.timestamp} · {ord.channel}</span>
-                        <span className="font-black uppercase text-stone-800">{ord.paymentMethod}</span>
+                      <p className="text-xs text-stone-500 mt-2">{tbl.guests} Guests</p>
+                      {tbl.currentBillUSD && (
+                        <p className="text-xs font-black text-amber-900 mt-1">Bill: {formatUSD(tbl.currentBillUSD)}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Customers Loyalty Tab */}
+            {activeNav === "customers" && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+                <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                  <div>
+                    <h2 className="text-base font-black text-stone-900">Customer Loyalty &amp; CRM</h2>
+                    <p className="text-xs text-stone-400">Select customer profile</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {INITIAL_CUSTOMERS.map((cust) => (
+                    <div key={cust.id} className="p-4 rounded-3xl bg-white border border-stone-200 shadow-2xs flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-sm text-stone-900">{cust.name}</span>
+                          <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">{cust.tier}</span>
+                        </div>
+                        <p className="text-xs text-stone-500 mt-0.5">{cust.phone}</p>
+                        <p className="text-xs font-bold text-emerald-700 mt-1">⭐ {cust.points} Points Available</p>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundFX.playSuccess();
+                          setSelectedCustomer(cust);
+                          setActiveNav("register");
+                          showNotification("Customer Attached", `${cust.name} attached`, "success");
+                        }}
+                        className="px-3 py-2 rounded-xl text-white font-black text-xs shadow-xs"
+                        style={{ background: "#4A2E1F" }}
+                      >
+                        Attach
+                      </button>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </main>
+
+          {/* ── 2. Compact Multi-Row Modifier Panel with UNIFORM EQUAL BUTTON SIZES (5-Column Grid) ── */}
+          {activeNav === "register" && activeItem && (activeIsBeverage || activeIsPastry) && (
+            <div className="shrink-0 border-t border-stone-200/90 bg-white/95 backdrop-blur-md px-5 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20">
+              {/* Context Header */}
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Condiments:</span>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-black text-white shadow-2xs" style={{ background: "#4A2E1F" }}>
+                    {activeItem.name} ({formatUSD(activeItem.price)})
+                  </span>
+                  {getMissingModifiers(activeItem).length > 0 && (
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      ⚠️ Required: {getMissingModifiers(activeItem).join(", ")}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-stone-400 font-medium">1 Row Per Group · Equal Width Buttons</span>
+              </div>
+
+              {/* Multi-Row Grid Stack with UNIFORM BUTTON SIZES (grid-cols-5) */}
+              {activeIsBeverage ? (
+                <div className="flex flex-col gap-1.5">
+                  {/* Row 1 — Temp */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Temp:</span>
+                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                      {["Hot", "Iced"].map((temp) => {
+                        const isSel = activeItem.notes === temp;
+                        return (
+                          <button
+                            key={temp}
+                            type="button"
+                            onClick={() => handleSelectModifierChip("notes", temp)}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                            }`}
+                            style={isSel ? { background: "#4A2E1F" } : {}}
+                          >
+                            {temp}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 2 — Size */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Size:</span>
+                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                      {[
+                        { val: "Small ($0.00)", label: "Small ($0.00)" },
+                        { val: "Medium (+$0.30)", label: "Medium (+$0.30)" },
+                        { val: "Large (+$0.60)", label: "Large (+$0.60)" },
+                      ].map((s) => {
+                        const isSel = activeItem.size === s.val;
+                        return (
+                          <button
+                            key={s.val}
+                            type="button"
+                            onClick={() => handleSelectModifierChip("size", s.val)}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                            }`}
+                            style={isSel ? { background: "#4A2E1F" } : {}}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 3 — Sugar */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Sugar:</span>
+                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                      {["0%", "30%", "50%", "70%", "100%"].map((sg) => {
+                        const isSel = activeItem.sweetness === sg;
+                        return (
+                          <button
+                            key={sg}
+                            type="button"
+                            onClick={() => handleSelectModifierChip("sweetness", sg)}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                            }`}
+                            style={isSel ? { background: "#4A2E1F" } : {}}
+                          >
+                            {sg}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 4 — Ice */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Ice:</span>
+                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                      {["No Ice", "Less Ice", "Normal Ice", "Extra Ice"].map((ic) => {
+                        const isSel = activeItem.ice === ic;
+                        return (
+                          <button
+                            key={ic}
+                            type="button"
+                            onClick={() => handleSelectModifierChip("ice", ic)}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                            }`}
+                            style={isSel ? { background: "#4A2E1F" } : {}}
+                          >
+                            {ic}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Pastry Food Options */
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-[11px] font-bold text-stone-500 uppercase tracking-tight">Warm Up:</span>
+                    <div className="grid grid-cols-5 gap-1.5 flex-1">
+                      {["Warm Up", "No Warm Up"].map((w) => {
+                        const isSel = activeItem.notes === w;
+                        return (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => handleSelectModifierChip("notes", w)}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
+                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                            }`}
+                            style={isSel ? { background: "#4A2E1F" } : {}}
+                          >
+                            {w}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
 
-          {/* Tables Seating Tab */}
-          {activeNav === "tables" && (
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
-              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-                <div>
-                  <h2 className="text-base font-black text-stone-900">Dine-In Table Seating Floor Plan</h2>
-                  <p className="text-xs text-stone-400">Assign table to current ticket</p>
-                </div>
+          {/* ── 3. Bottom Navigation Bar (STRICTLY CONFINED TO LEFT WORKSPACE, NEVER UNDER CART!) ── */}
+          <nav className="h-12 shrink-0 bg-white/95 backdrop-blur-md border-t border-stone-200 flex items-center justify-around px-3 z-20 select-none">
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(880);
+                setActiveNav("register");
+              }}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+                activeNav === "register" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+              }`}
+            >
+              <Store size={16} className={activeNav === "register" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+              <span className="text-[10px] tracking-tight mt-0.5">Sales</span>
+              {activeNav === "register" && (
+                <motion.div layoutId="bottomNavDot" className="h-0.5 w-4 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(880);
+                setActiveNav("orders");
+              }}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+                activeNav === "orders" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+              }`}
+            >
+              <div className="relative">
+                <ClipboardList size={16} className={activeNav === "orders" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+                {heldOrders.length > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 h-3 min-w-[12px] px-1 rounded-full bg-amber-600 text-white text-[8px] font-black flex items-center justify-center">
+                    {heldOrders.length}
+                  </span>
+                )}
               </div>
+              <span className="text-[10px] tracking-tight mt-0.5">Orders</span>
+              {activeNav === "orders" && (
+                <motion.div layoutId="bottomNavDot" className="h-0.5 w-4 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
+              )}
+            </button>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {INITIAL_TABLES.map((tbl) => (
-                  <button
-                    key={tbl.id}
-                    type="button"
-                    onClick={() => {
-                      soundFX.playBlip();
-                      setSelectedTable(tbl.name);
-                      setActiveNav("register");
-                      showNotification("Table Assigned", `Ticket assigned to ${tbl.name}`, "info");
-                    }}
-                    className={`p-4 rounded-3xl border-2 text-left transition-all cursor-pointer ${
-                      selectedTable === tbl.name
-                        ? "border-[#4A2E1F] bg-amber-50"
-                        : tbl.status === "occupied"
-                        ? "border-amber-300 bg-amber-50/40"
-                        : tbl.status === "reserved"
-                        ? "border-indigo-200 bg-indigo-50/40"
-                        : "border-stone-200 bg-white hover:border-stone-400"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="font-black text-sm text-stone-900">{tbl.name}</span>
-                      <span
-                        className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                          tbl.status === "occupied"
-                            ? "bg-amber-100 text-amber-800"
-                            : tbl.status === "reserved"
-                            ? "bg-indigo-100 text-indigo-800"
-                            : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
-                        {tbl.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-stone-500 mt-2">{tbl.guests} Guests</p>
-                    {tbl.currentBillUSD && (
-                      <p className="text-xs font-black text-amber-900 mt-1">Bill: {formatUSD(tbl.currentBillUSD)}</p>
-                    )}
-                  </button>
-                ))}
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(880);
+                setActiveNav("tables");
+              }}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+                activeNav === "tables" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+              }`}
+            >
+              <Grid3X3 size={16} className={activeNav === "tables" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+              <span className="text-[10px] tracking-tight mt-0.5">Tables</span>
+              {activeNav === "tables" && (
+                <motion.div layoutId="bottomNavDot" className="h-0.5 w-4 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(880);
+                setActiveNav("customers");
+              }}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
+                activeNav === "customers" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+              }`}
+            >
+              <Users size={16} className={activeNav === "customers" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+              <span className="text-[10px] tracking-tight mt-0.5">Customers</span>
+              {activeNav === "customers" && (
+                <motion.div layoutId="bottomNavDot" className="h-0.5 w-4 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(800);
+                setShowOperationsModal(true);
+              }}
+              className="flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl text-stone-400 hover:text-stone-700 transition-all cursor-pointer px-2 py-0.5"
+            >
+              <Settings size={16} className="stroke-[1.8]" />
+              <span className="text-[10px] tracking-tight mt-0.5">Operations</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                soundFX.playBlip(800);
+                setShowCashierModal(true);
+              }}
+              className="flex min-w-[60px] sm:min-w-[68px] h-9.5 items-center justify-center gap-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 transition-all cursor-pointer px-2 py-0.5"
+            >
+              <div className={`h-5 w-5 rounded-full ${currentStaff.avatarBg} text-white flex items-center justify-center text-[9px] font-black`}>
+                {currentStaff.avatarText}
               </div>
-            </div>
-          )}
-
-          {/* Customers Loyalty Tab */}
-          {activeNav === "customers" && (
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
-              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-                <div>
-                  <h2 className="text-base font-black text-stone-900">Customer Loyalty &amp; CRM</h2>
-                  <p className="text-xs text-stone-400">Select customer profile</p>
-                </div>
+              <div className="text-left">
+                <span className="text-[10px] font-black text-stone-900 block leading-tight">{currentStaff.name}</span>
+                <span className="text-[8px] font-bold text-stone-400 block leading-tight">S#{shift?.shiftNumber || 1}</span>
               </div>
+            </button>
+          </nav>
+        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {INITIAL_CUSTOMERS.map((cust) => (
-                  <div key={cust.id} className="p-4 rounded-3xl bg-white border border-stone-200 shadow-2xs flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-sm text-stone-900">{cust.name}</span>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">{cust.tier}</span>
-                      </div>
-                      <p className="text-xs text-stone-500 mt-0.5">{cust.phone}</p>
-                      <p className="text-xs font-bold text-emerald-700 mt-1">⭐ {cust.points} Points Available</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        soundFX.playSuccess();
-                        setSelectedCustomer(cust);
-                        setActiveNav("register");
-                        showNotification("Customer Attached", `${cust.name} attached`, "success");
-                      }}
-                      className="px-3 py-2 rounded-xl text-white font-black text-xs shadow-xs"
-                      style={{ background: "#4A2E1F" }}
-                    >
-                      Attach
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </main>
-
-        {/* ── Right Sidebar: High-Precision Tabular Cart & Dual Currency ─────────── */}
-        <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white border-l border-stone-200/90 shadow-lg z-30 overflow-hidden">
+        {/* ── RIGHT CART SIDEBAR (Extends full-height from topbar to the absolute bottom of the screen!) ── */}
+        <aside className="flex w-84 sm:w-96 shrink-0 flex-col h-full bg-white shadow-lg z-30 overflow-hidden">
           {/* Header & Order Channel Selector */}
           <div className="shrink-0 px-4 py-2 border-b border-stone-100 space-y-1.5 bg-stone-50/50">
             <div className="flex items-center justify-between">
@@ -1257,7 +1366,7 @@ export default function PosRegisterPage() {
           </div>
 
           {/* ── Table Rows with Precision Alignment & Swipe-to-Delete ── */}
-          <div className="flex-1 overflow-y-auto px-2 py-1 min-h-0 pb-16 space-y-1">
+          <div className="flex-1 overflow-y-auto px-2 py-1 min-h-0 space-y-1">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center py-12 text-stone-300">
                 <ShoppingCart size={32} className="mb-2 stroke-[1.5]" />
@@ -1407,7 +1516,7 @@ export default function PosRegisterPage() {
             </div>
           </div>
 
-          {/* Action Keypad Grid */}
+          {/* ── Action Keypad Grid (Flush at bottom right corner) ── */}
           <div className="shrink-0 p-2.5 bg-stone-100/95 border-t border-stone-200">
             <div className="grid grid-cols-4 gap-1.5">
               <button
@@ -1518,113 +1627,6 @@ export default function PosRegisterPage() {
           </div>
         </aside>
       </div>
-
-      {/* ── Fixed Bottom Navigation Bar (iPad Ergonomic Layout) ───────── */}
-      <nav className="h-13 shrink-0 bg-white/95 backdrop-blur-md border-t border-stone-200 flex items-center justify-around px-4 sm:px-8 z-40 select-none">
-        <button
-          type="button"
-          onClick={() => {
-            soundFX.playBlip(880);
-            setActiveNav("register");
-          }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-            activeNav === "register" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-          }`}
-        >
-          <Store size={17} className={activeNav === "register" ? "stroke-[2.5]" : "stroke-[1.8]"} />
-          <span className="text-[10px] tracking-tight mt-0.5">Sales</span>
-          {activeNav === "register" && (
-            <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            soundFX.playBlip(880);
-            setActiveNav("orders");
-          }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-            activeNav === "orders" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-          }`}
-        >
-          <div className="relative">
-            <ClipboardList size={17} className={activeNav === "orders" ? "stroke-[2.5]" : "stroke-[1.8]"} />
-            {heldOrders.length > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 h-3.5 min-w-[14px] px-1 rounded-full bg-amber-600 text-white text-[8px] font-black flex items-center justify-center">
-                {heldOrders.length}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] tracking-tight mt-0.5">Orders</span>
-          {activeNav === "orders" && (
-            <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            soundFX.playBlip(880);
-            setActiveNav("tables");
-          }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-            activeNav === "tables" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-          }`}
-        >
-          <Grid3X3 size={17} className={activeNav === "tables" ? "stroke-[2.5]" : "stroke-[1.8]"} />
-          <span className="text-[10px] tracking-tight mt-0.5">Tables</span>
-          {activeNav === "tables" && (
-            <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            soundFX.playBlip(880);
-            setActiveNav("customers");
-          }}
-          className={`flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-            activeNav === "customers" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-          }`}
-        >
-          <Users size={17} className={activeNav === "customers" ? "stroke-[2.5]" : "stroke-[1.8]"} />
-          <span className="text-[10px] tracking-tight mt-0.5">Customers</span>
-          {activeNav === "customers" && (
-            <motion.div layoutId="bottomNavDot" className="h-1 w-5 rounded-full bg-[#4A2E1F] absolute -bottom-0.5" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            soundFX.playBlip(800);
-            setShowOperationsModal(true);
-          }}
-          className="flex min-w-[56px] sm:min-w-[64px] h-10 flex-col items-center justify-center rounded-xl text-stone-400 hover:text-stone-700 transition-all cursor-pointer px-2 py-0.5"
-        >
-          <Settings size={17} className="stroke-[1.8]" />
-          <span className="text-[10px] tracking-tight mt-0.5">Operations</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            soundFX.playBlip(800);
-            setShowCashierModal(true);
-          }}
-          className="flex min-w-[64px] sm:min-w-[72px] h-10 items-center justify-center gap-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 transition-all cursor-pointer px-2 py-0.5"
-        >
-          <div className={`h-5.5 w-5.5 rounded-full ${currentStaff.avatarBg} text-white flex items-center justify-center text-[9px] font-black`}>
-            {currentStaff.avatarText}
-          </div>
-          <div className="text-left">
-            <span className="text-[10px] font-black text-stone-900 block leading-tight">{currentStaff.name}</span>
-            <span className="text-[8px] font-bold text-stone-400 block leading-tight">S#{shift?.shiftNumber || 1}</span>
-          </div>
-        </button>
-      </nav>
 
       {/* ── MODALS ── */}
 
