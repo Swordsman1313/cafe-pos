@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Star, Coffee, Trophy, TrendingUp, Sparkles, Award } from "lucide-react";
 import { RankedProduct } from "@/lib/analytics-aggregator";
 
@@ -14,6 +14,7 @@ export default function TopDrinksRanking({
   isLight = false,
 }: TopDrinksRankingProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const listRef = useRef<HTMLDivElement>(null);
 
   const categories = ["all", ...Array.from(new Set(products.map((p) => p.category)))];
 
@@ -22,8 +23,14 @@ export default function TopDrinksRanking({
       ? products
       : products.filter((p) => p.category === selectedCategory);
 
-  const totalVolume = products.reduce((s, p) => s + p.quantity, 0);
+  // Reset scroll to top whenever category filter changes so Rank #1 is always visible
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  }, [selectedCategory]);
 
+  const totalVolume = products.reduce((s, p) => s + p.quantity, 0);
   const medals = ["🥇", "🥈", "🥉"];
 
   return (
@@ -33,7 +40,7 @@ export default function TopDrinksRanking({
       }`}
     >
       {/* ── Fixed Header ── */}
-      <div className="shrink-0 mb-2.5">
+      <div className="shrink-0 mb-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
@@ -54,7 +61,7 @@ export default function TopDrinksRanking({
           </span>
         </div>
 
-        {/* ── Category Pills Filter (No truncation, horizontal scrollable with no-scrollbar flex-nowrap) ── */}
+        {/* ── Category Pills Filter (Horizontal scrollable with no truncation) ── */}
         {categories.length > 2 && (
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none flex-nowrap py-1 mb-1">
             {categories.map((cat) => (
@@ -77,86 +84,95 @@ export default function TopDrinksRanking({
         )}
       </div>
 
-      {/* ── Internal Scrollable Drinks List ── */}
-      <div className="flex-1 overflow-y-auto pr-1.5 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-300 min-h-0">
-        {filteredProducts.map((item, idx) => {
-          const isTop3 = idx < 3;
+      {/* ── Internal Scrollable Drinks List with Gradient Mask ── */}
+      <div className="relative flex-1 min-h-0">
+        {/* Subtle Top & Bottom Gradient Mask Fades */}
+        <div className={`pointer-events-none absolute top-0 inset-x-0 h-2 bg-gradient-to-b ${isLight ? "from-white" : "from-slate-900"} to-transparent z-10`} />
+        <div className={`pointer-events-none absolute bottom-0 inset-x-0 h-3 bg-gradient-to-t ${isLight ? "from-white" : "from-slate-900"} to-transparent z-10`} />
 
-          return (
-            <div
-              key={item.name}
-              className={`p-3 rounded-2xl border transition-all hover:scale-[1.01] max-w-full overflow-hidden ${
-                isLight
-                  ? isTop3
-                    ? "bg-amber-50/50 border-amber-200/80"
-                    : "bg-slate-50 border-slate-200/80"
-                  : isTop3
-                  ? "bg-amber-950/20 border-amber-500/20"
-                  : "bg-slate-800/40 border-slate-700/40"
-              }`}
-            >
-              {/* Row Header: Rank, Name, Category & Revenue */}
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 min-w-0 pr-1">
-                  <span className="text-base shrink-0 select-none">
-                    {medals[idx] ?? (
-                      <span className="text-[11px] font-black text-slate-400 w-5 text-center inline-block">
-                        #{idx + 1}
-                      </span>
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className={`font-bold leading-tight truncate text-sm ${isLight ? "text-slate-900" : "text-white"}`}>
-                        {item.name}
-                      </p>
-                      <span className={`text-[9.5px] font-semibold px-1.5 py-0.2 rounded-md shrink-0 ${
-                        isLight ? "bg-slate-200 text-slate-700" : "bg-slate-700 text-slate-300"
-                      }`}>
-                        {item.category}
-                      </span>
-                    </div>
+        <div
+          ref={listRef}
+          className="h-full overflow-y-auto pr-1.5 py-1 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-300"
+        >
+          {filteredProducts.map((item, idx) => {
+            const isTop3 = idx < 3;
 
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 font-medium px-2 py-0.5 rounded-md text-[11px]">
-                        {item.quantity} sold · {item.shareOfTotalPct}% mix
-                      </span>
+            return (
+              <div
+                key={item.name}
+                className={`p-3 rounded-2xl border transition-all hover:scale-[1.01] max-w-full overflow-hidden ${
+                  isLight
+                    ? isTop3
+                      ? "bg-amber-50/50 border-amber-200/80"
+                      : "bg-slate-50 border-slate-200/80"
+                    : isTop3
+                    ? "bg-amber-950/20 border-amber-500/20"
+                    : "bg-slate-800/40 border-slate-700/40"
+                }`}
+              >
+                {/* Row Header: Rank, Name, Category & Revenue */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0 pr-1">
+                    <span className="text-base shrink-0 select-none">
+                      {medals[idx] ?? (
+                        <span className="text-[11px] font-black text-slate-400 w-5 text-center inline-block">
+                          #{idx + 1}
+                        </span>
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className={`font-bold leading-tight truncate text-sm ${isLight ? "text-slate-900" : "text-white"}`}>
+                          {item.name}
+                        </p>
+                        <span className={`text-[9.5px] font-semibold px-1.5 py-0.2 rounded-md shrink-0 ${
+                          isLight ? "bg-slate-200 text-slate-700" : "bg-slate-700 text-slate-300"
+                        }`}>
+                          {item.category}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 font-medium px-2 py-0.5 rounded-md text-[11px]">
+                          {item.quantity} sold · {item.shareOfTotalPct}% mix
+                        </span>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className={`font-extrabold text-sm block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
+                      ${item.revenueUSD.toFixed(2)}
+                    </span>
+                    <span className={`font-medium text-[11px] block mt-0.5 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                      {item.revenueKHR.toLocaleString()} ៛
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <span className={`font-extrabold text-sm block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
-                    ${item.revenueUSD.toFixed(2)}
-                  </span>
-                  <span className={`font-medium text-[11px] block mt-0.5 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
-                    {item.revenueKHR.toLocaleString()} ៛
-                  </span>
+                {/* Relative Volume Fill Bar */}
+                <div className="space-y-1 max-w-full overflow-hidden">
+                  <div className={`h-1.5 rounded-full overflow-hidden max-w-full ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
+                    <div
+                      style={{ width: `${Math.min(item.relativeVolumePct, 100)}%` }}
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        idx === 0
+                          ? "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 shadow-sm"
+                          : idx === 1
+                          ? "bg-gradient-to-r from-amber-500 to-amber-400"
+                          : "bg-gradient-to-r from-amber-600/80 to-amber-500/70"
+                      }`}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[8.5px] text-slate-500 dark:text-slate-400 font-semibold px-0.5">
+                    <span>Relative Demand Volume</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-400">{item.relativeVolumePct}%</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Relative Volume Fill Bar */}
-              <div className="space-y-1 max-w-full overflow-hidden">
-                <div className={`h-1.5 rounded-full overflow-hidden max-w-full ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
-                  <div
-                    style={{ width: `${Math.min(item.relativeVolumePct, 100)}%` }}
-                    className={`h-full rounded-full transition-all duration-700 ${
-                      idx === 0
-                        ? "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 shadow-sm"
-                        : idx === 1
-                        ? "bg-gradient-to-r from-amber-500 to-amber-400"
-                        : "bg-gradient-to-r from-amber-600/80 to-amber-500/70"
-                    }`}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-[8.5px] text-slate-500 dark:text-slate-400 font-semibold px-0.5">
-                  <span>Relative Demand Volume</span>
-                  <span className="font-bold text-amber-700 dark:text-amber-400">{item.relativeVolumePct}%</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Fixed Footer ── */}

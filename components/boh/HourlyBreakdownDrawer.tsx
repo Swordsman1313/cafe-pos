@@ -30,7 +30,7 @@ export default function HourlyBreakdownDrawer({
   onClose,
   isLight = false,
 }: HourlyBreakdownDrawerProps) {
-  // Esc key listener
+  // Esc key listener for clean dismissal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -49,41 +49,49 @@ export default function HourlyBreakdownDrawer({
   const cardPct = totalRev > 0 ? Math.max(0, 100 - cashPct - khqrPct) : 10;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-    >
+    <>
+      {/* ── Proper Scrim Backdrop Overlay (z-40) ── */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-lg h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ${
-          isLight ? "bg-white text-slate-900 border-l border-slate-200" : "bg-slate-900 text-white border-l border-slate-800"
+        onClick={onClose}
+        className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+        aria-hidden="true"
+      />
+
+      {/* ── Dedicated Right-Side Overlay Slide-Over Panel (z-50) ── */}
+      <aside
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ${
+          isLight
+            ? "bg-white text-slate-900 border-l border-slate-200"
+            : "bg-slate-900 text-white border-l border-slate-800"
         }`}
       >
         {/* ── Top Header ── */}
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b pb-4 border-slate-200/60 dark:border-slate-800">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
                   <Clock size={16} />
                 </div>
                 <div>
-                  <h2 className="text-base font-extrabold flex items-center gap-1.5">
+                  <h2 className="text-base font-extrabold flex items-center gap-1.5 leading-tight">
                     {bucket.windowTitle}
                   </h2>
-                  <p className={`text-[11px] font-medium ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+                  <p className={`text-[11px] font-medium mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
                     Hourly Drill-Down, Receipts &amp; Prep Speed
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Distinct ✕ Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Close Drill-Down Panel"
+              className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0"
             >
-              <X size={16} />
+              <X size={17} />
             </button>
           </div>
 
@@ -298,7 +306,7 @@ export default function HourlyBreakdownDrawer({
             Close Drill-Down Inspection
           </button>
         </div>
-      </div>
-    </div>
+      </aside>
+    </>
   );
 }

@@ -123,6 +123,7 @@ export default function HourlySalesChart({
   const hoveredBucket = hoveredIndex !== null ? activeDataset[hoveredIndex] : null;
 
   const handleBarClick = (bucket: HourlyBucket | DailyBucket, idx: number) => {
+    setHoveredIndex(null);
     setSelectedBarIndex(idx);
     onSelectHour?.(bucket);
   };
