@@ -38,6 +38,7 @@ import {
   aggregatePOSAnalytics,
   AnalyticsSummary,
   HourlyBucket,
+  DailyBucket,
   RawPOSOrder,
   KHR_EXCHANGE_RATE,
 } from "@/lib/analytics-aggregator";
@@ -105,8 +106,8 @@ export default function CafeDashboard() {
     label: "Today",
   });
 
-  // State: Active Slide-Over Hour Breakdown
-  const [selectedHourlyBucket, setSelectedHourlyBucket] = useState<HourlyBucket | null>(null);
+  // State: Active Slide-Over Hour / Day Breakdown
+  const [selectedBucket, setSelectedBucket] = useState<HourlyBucket | DailyBucket | null>(null);
 
   // State: POS Orders & Aggregated Analytics
   const [posOrders, setPosOrders] = useState<RawPOSOrder[]>([]);
@@ -182,17 +183,16 @@ export default function CafeDashboard() {
   const handleExportActiveXLS = () => {
     const filename = `The_Daily_Drip_Sales_${dateRange.startDate}_to_${dateRange.endDate}`;
 
-    // Sheet 1: Hourly Velocity
-    const hourlyColumns: ReportColumn[] = [
-      { header: "Time Window", key: "label" },
+    // Sheet 1: Hourly or Daily Velocity
+    const velocityColumns: ReportColumn[] = [
+      { header: "Window / Day", key: "label" },
       { header: "Revenue (USD)", key: "revenueUSD", format: (v) => `$${Number(v).toFixed(2)}` },
       { header: "Revenue (KHR)", key: "revenueKHR", format: (v) => `${Number(v).toLocaleString()} ៛` },
       { header: "Order Tickets", key: "orders" },
-      { header: "Rate (Ord/Hr)", key: "orderRatePerHour" },
       { header: "Avg Ticket (USD)", key: "avgTicketUSD", format: (v) => `$${Number(v).toFixed(2)}` },
       { header: "Avg Speed (sec)", key: "avgTransactionSpeedSec", format: (v) => `${v}s` },
-      { header: "% of Daily Total", key: "pctOfDaily", format: (v) => `${v}%` },
-      { header: "Peak Hour Flag", key: "isPeak", format: (v) => (v ? "🔥 PEAK RUSH" : "—") },
+      { header: "% of Total", key: "pctOfDaily", format: (v) => `${v}%` },
+      { header: "Peak Flag", key: "isPeak", format: (v) => (v ? "🔥 PEAK" : "—") },
     ];
 
     // Sheet 2: Top Products
@@ -221,15 +221,14 @@ export default function CafeDashboard() {
 
     exportToExcel(filename, [
       {
-        sheetName: "Hourly Sales Velocity",
-        columns: hourlyColumns,
-        data: analytics.hourlyData,
+        sheetName: analytics.isWeeklyView ? "7-Day Sales Velocity" : "Hourly Sales Velocity",
+        columns: velocityColumns,
+        data: analytics.isWeeklyView ? analytics.dailyData : analytics.hourlyData,
         summary: {
           label: "TOTALS",
           revenueUSD: `$${analytics.totalRevenueUSD.toFixed(2)}`,
           revenueKHR: `${analytics.totalRevenueKHR.toLocaleString()} ៛`,
           orders: analytics.totalOrders,
-          orderRatePerHour: "—",
           avgTicketUSD: `$${analytics.avgTicketUSD.toFixed(2)}`,
           avgTransactionSpeedSec: "—",
           pctOfDaily: "100%",
@@ -262,11 +261,11 @@ export default function CafeDashboard() {
       { label: "Total Revenue (USD)", value: `$${analytics.totalRevenueUSD.toFixed(2)}`, sublabel: `${analytics.totalRevenueKHR.toLocaleString()} ៛` },
       { label: "Total Orders Served", value: String(analytics.totalOrders), sublabel: `Avg $${analytics.avgTicketUSD.toFixed(2)} / ticket` },
       { label: "Gross Profit Margin", value: `${analytics.grossMarginPercent}%`, sublabel: `Profit $${analytics.grossProfitUSD.toFixed(2)}` },
-      { label: "Peak Rush Window", value: analytics.peakHourLabel, sublabel: `$${analytics.peakHourRevenueUSD.toFixed(2)} revenue` },
+      { label: "Peak Window", value: analytics.peakHourLabel, sublabel: `$${analytics.peakHourRevenueUSD.toFixed(2)} revenue` },
     ];
 
     const columns: ReportColumn[] = [
-      { header: "Time / Hour", key: "label", align: "left" },
+      { header: analytics.isWeeklyView ? "Day" : "Time / Hour", key: "label", align: "left" },
       { header: "Revenue (USD)", key: "revenueUSD", align: "right", format: (v) => `$${Number(v).toFixed(2)}` },
       { header: "Revenue (KHR)", key: "revenueKHR", align: "right", format: (v) => `${Number(v).toLocaleString()} ៛` },
       { header: "Tickets", key: "orders", align: "center" },
@@ -276,13 +275,13 @@ export default function CafeDashboard() {
 
     printExecutiveReport({
       title: "The Daily Drip — Executive Sales & Operations Audit",
-      subtitle: `Hourly Volume, Product Mix & Stock Depletion Audit Report`,
+      subtitle: `Sales Volume, Product Mix & Stock Depletion Audit Report`,
       dateRangeLabel: analytics.dateRangeLabel,
       branchName: "The Daily Drip · Flagship Toul Kork 592",
       generatedBy: "System Administrator / Dara",
       kpis,
       columns,
-      data: analytics.hourlyData,
+      data: analytics.isWeeklyView ? analytics.dailyData : analytics.hourlyData,
       summaryRow: {
         label: "GRAND TOTAL",
         revenueUSD: `$${analytics.totalRevenueUSD.toFixed(2)}`,
@@ -383,7 +382,7 @@ export default function CafeDashboard() {
           isLight={isLight}
         />
         <KpiCard
-          label="Peak Rush Hour"
+          label={analytics.isWeeklyView ? "Peak Day" : "Peak Rush Hour"}
           value={analytics.peakHourLabel}
           sub={`$${analytics.peakHourRevenueUSD.toFixed(2)} (${analytics.peakHourOrders} tickets)`}
           icon={Flame}
@@ -394,13 +393,15 @@ export default function CafeDashboard() {
 
       {/* ── Main Interactive Data Visualizations Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* 1. Interactive Hourly Sales & Velocity Chart (2 Columns) */}
+        {/* 1. Interactive Hourly / 7-Day Velocity Chart (2 Columns) */}
         <div className="lg:col-span-2">
           <HourlySalesChart
             data={analytics.hourlyData}
+            dailyData={analytics.dailyData}
+            isWeeklyView={analytics.isWeeklyView}
             isLight={isLight}
             khrRate={KHR_EXCHANGE_RATE}
-            onSelectHour={(bucket) => setSelectedHourlyBucket(bucket)}
+            onSelectHour={(bucket) => setSelectedBucket(bucket)}
           />
         </div>
 
@@ -432,11 +433,11 @@ export default function CafeDashboard() {
         </div>
       </div>
 
-      {/* ── Slide-Over Granular Hourly Breakdown Drawer ── */}
-      {selectedHourlyBucket && (
+      {/* ── Slide-Over Granular Breakdown Drawer ── */}
+      {selectedBucket && (
         <HourlyBreakdownDrawer
-          bucket={selectedHourlyBucket}
-          onClose={() => setSelectedHourlyBucket(null)}
+          bucket={selectedBucket}
+          onClose={() => setSelectedBucket(null)}
           isLight={isLight}
         />
       )}

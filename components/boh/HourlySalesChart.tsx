@@ -12,21 +12,26 @@ import {
   Layers,
   Sparkles,
   Zap,
+  Calendar,
 } from "lucide-react";
-import { HourlyBucket } from "@/lib/analytics-aggregator";
+import { HourlyBucket, DailyBucket } from "@/lib/analytics-aggregator";
 
 export type ChartMetric = "USD" | "KHR" | "TICKETS" | "RATE";
 export type ChartStyle = "bar" | "line";
 
 interface HourlySalesChartProps {
   data: HourlyBucket[];
+  dailyData?: DailyBucket[];
+  isWeeklyView?: boolean;
   isLight?: boolean;
   khrRate?: number;
-  onSelectHour?: (bucket: HourlyBucket) => void;
+  onSelectHour?: (bucket: HourlyBucket | DailyBucket) => void;
 }
 
 export default function HourlySalesChart({
   data,
+  dailyData = [],
+  isWeeklyView = false,
   isLight = false,
   khrRate = 4100,
   onSelectHour,
@@ -34,9 +39,13 @@ export default function HourlySalesChart({
   const [metric, setMetric] = useState<ChartMetric>("USD");
   const [chartStyle, setChartStyle] = useState<ChartStyle>("bar");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
+
+  // Active dataset: Hourly or 7-Day Daily
+  const activeDataset: Array<HourlyBucket | DailyBucket> = isWeeklyView && dailyData.length > 0 ? dailyData : data;
 
   // Helper to extract value based on selected metric
-  const getValue = (bucket: HourlyBucket): number => {
+  const getValue = (bucket: HourlyBucket | DailyBucket): number => {
     switch (metric) {
       case "USD":
         return bucket.revenueUSD;
@@ -67,22 +76,22 @@ export default function HourlySalesChart({
 
   // Calculate dynamic max value for scaling
   const maxValue = useMemo(() => {
-    const vals = data.map((d) => getValue(d));
+    const vals = activeDataset.map((d) => getValue(d));
     const max = Math.max(...vals, 1);
     return max;
-  }, [data, metric]);
+  }, [activeDataset, metric]);
 
   // Peak bucket identification
   const peakBucket = useMemo(() => {
-    return [...data].sort((a, b) => getValue(b) - getValue(a))[0] || data[3];
-  }, [data, metric]);
+    return [...activeDataset].sort((a, b) => getValue(b) - getValue(a))[0] || activeDataset[0];
+  }, [activeDataset, metric]);
 
-  const totalRevenueUSD = useMemo(() => data.reduce((s, d) => s + d.revenueUSD, 0), [data]);
-  const totalOrders = useMemo(() => data.reduce((s, d) => s + d.orders, 0), [data]);
+  const totalRevenueUSD = useMemo(() => activeDataset.reduce((s, d) => s + d.revenueUSD, 0), [activeDataset]);
+  const totalOrders = useMemo(() => activeDataset.reduce((s, d) => s + d.orders, 0), [activeDataset]);
 
   // Generate SVG path for Line / Area Wave View
   const wavePath = useMemo(() => {
-    if (data.length === 0) return { area: "", line: "", points: [] };
+    if (activeDataset.length === 0) return { area: "", line: "", points: [] };
     const width = 800;
     const height = 150;
     const paddingX = 25;
@@ -90,9 +99,9 @@ export default function HourlySalesChart({
     const chartW = width - paddingX * 2;
     const chartH = height - paddingY * 2;
 
-    const points = data.map((d, i) => {
+    const points = activeDataset.map((d, i) => {
       const val = getValue(d);
-      const x = paddingX + (i / (data.length - 1)) * chartW;
+      const x = paddingX + (i / (activeDataset.length - 1)) * chartW;
       const y = height - paddingY - (val / Math.max(maxValue, 1)) * chartH;
       return { x, y, bucket: d };
     });
@@ -109,9 +118,14 @@ export default function HourlySalesChart({
     const areaCommands = `${lineCommands} L ${last.x},${height - paddingY} L ${first.x},${height - paddingY} Z`;
 
     return { area: areaCommands, line: lineCommands, points };
-  }, [data, metric, maxValue]);
+  }, [activeDataset, metric, maxValue]);
 
-  const hoveredBucket = hoveredIndex !== null ? data[hoveredIndex] : null;
+  const hoveredBucket = hoveredIndex !== null ? activeDataset[hoveredIndex] : null;
+
+  const handleBarClick = (bucket: HourlyBucket | DailyBucket, idx: number) => {
+    setSelectedBarIndex(idx);
+    onSelectHour?.(bucket);
+  };
 
   return (
     <div
@@ -124,17 +138,19 @@ export default function HourlySalesChart({
         <div>
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold">
-              <BarChart3 size={16} />
+              {isWeeklyView ? <Calendar size={16} /> : <BarChart3 size={16} />}
             </div>
             <div>
               <h2 className="text-sm font-extrabold flex items-center gap-2">
-                Hourly Velocity &amp; Rush Architecture
+                {isWeeklyView ? "7-Day Revenue & Daily Volume" : "Hourly Velocity & Rush Architecture"}
                 <span className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-500/30">
                   <Flame size={10} className="fill-amber-400" /> Peak {peakBucket.label}
                 </span>
               </h2>
               <p className={`text-[11px] mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                Click any bar for granular item breakdown &amp; ring-up speed
+                {isWeeklyView
+                  ? "Daily revenue & total tickets across the 7-day window"
+                  : "Click any hour column for granular item breakdown & ring-up speed"}
               </p>
             </div>
           </div>
@@ -153,7 +169,7 @@ export default function HourlySalesChart({
                 { id: "USD", label: "USD ($)" },
                 { id: "KHR", label: "KHR (៛)" },
                 { id: "TICKETS", label: "Tickets (#)" },
-                { id: "RATE", label: "Rate (Ord/Hr)" },
+                { id: "RATE", label: isWeeklyView ? "Avg Ord/Hr" : "Rate (Ord/Hr)" },
               ] as { id: ChartMetric; label: string }[]
             ).map((m) => (
               <button
@@ -209,7 +225,7 @@ export default function HourlySalesChart({
         </div>
       </div>
 
-      {/* ── Active Hover / Click Hint Callout ── */}
+      {/* ── Active Hover / Click Callout ── */}
       <div
         className={`mb-3 px-3 py-2 rounded-2xl border flex items-center justify-between text-xs transition-all ${
           isLight
@@ -221,7 +237,7 @@ export default function HourlySalesChart({
           <>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="font-bold">{hoveredBucket.label}:</span>
+              <span className="font-bold">{hoveredBucket.windowTitle || hoveredBucket.label}:</span>
               <span className="font-black text-amber-500">
                 {formatValue(getValue(hoveredBucket))}
               </span>
@@ -232,17 +248,17 @@ export default function HourlySalesChart({
             <div className="flex items-center gap-3 text-[11px] text-slate-400 font-semibold">
               <span>Speed: {hoveredBucket.avgTransactionSpeedSec}s</span>
               <span className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-md font-bold">
-                {hoveredBucket.pctOfDaily}% Day Mix
+                {hoveredBucket.pctOfDaily}% Mix
               </span>
             </div>
           </>
         ) : (
           <div className="flex items-center justify-between w-full text-slate-400 text-[11px]">
             <span className="flex items-center gap-1.5">
-              <Sparkles size={13} className="text-amber-400" /> Click any hour column to open granular ticket &amp; drink drawer
+              <Sparkles size={13} className="text-amber-400" /> Click any column to open itemized sales &amp; speed drawer
             </span>
             <span className="font-bold text-amber-400">
-              Metric: {metric} · Peak: {peakBucket.label} ({formatValue(getValue(peakBucket), true)})
+              {isWeeklyView ? "7-Day Total:" : "Today Total:"} ${totalRevenueUSD.toFixed(2)} · {totalOrders} Orders
             </span>
           </div>
         )}
@@ -253,31 +269,34 @@ export default function HourlySalesChart({
         {chartStyle === "bar" ? (
           /* ── 1. Column Bars View ── */
           <div className="flex items-end gap-1 sm:gap-2 h-44 w-full pt-4 pb-2">
-            {data.map((bucket, idx) => {
+            {activeDataset.map((bucket, idx) => {
               const val = getValue(bucket);
               const heightPct = Math.max(6, Math.round((val / Math.max(maxValue, 1)) * 100));
-              const isPeak = bucket.hour === peakBucket.hour;
+              const isPeak = bucket.label === peakBucket.label;
               const isHovered = hoveredIndex === idx;
+              const isSelected = selectedBarIndex === idx;
 
               return (
                 <div
-                  key={bucket.hour}
-                  onClick={() => onSelectHour?.(bucket)}
+                  key={bucket.label + idx}
+                  onClick={() => handleBarClick(bucket, idx)}
                   onMouseEnter={() => setHoveredIndex(idx)}
                   onMouseLeave={() => setHoveredIndex(null)}
-                  className="flex flex-col items-center flex-1 h-full justify-end group cursor-pointer transition-all relative min-w-0"
+                  className={`flex flex-col items-center flex-1 h-full justify-end group cursor-pointer transition-all relative min-w-0 ${
+                    isSelected ? "scale-[1.02]" : ""
+                  }`}
                 >
-                  {/* Peak Flame on Peak Bar */}
+                  {/* Peak Flame */}
                   {isPeak && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 animate-bounce">
                       <Flame size={12} className="text-amber-400 fill-amber-400 drop-shadow-md" />
                     </div>
                   )}
 
-                  {/* Value Label on Top of Bar */}
+                  {/* Value Label on Top */}
                   <span
                     className={`text-[8.5px] font-bold mb-1 transition-all truncate max-w-full ${
-                      isHovered || isPeak
+                      isSelected || isHovered || isPeak
                         ? "text-amber-400 font-extrabold scale-110"
                         : isLight
                         ? "text-slate-400"
@@ -292,7 +311,9 @@ export default function HourlySalesChart({
                     <div
                       style={{ height: `${heightPct}%` }}
                       className={`w-full rounded-t-lg transition-all duration-300 ${
-                        isPeak
+                        isSelected
+                          ? "bg-gradient-to-t from-amber-500 to-amber-300 ring-2 ring-amber-400 shadow-lg shadow-amber-500/50"
+                          : isPeak
                           ? "bg-gradient-to-t from-amber-600 via-amber-500 to-amber-300 shadow-lg shadow-amber-500/40 ring-1 ring-amber-300"
                           : isHovered
                           ? "bg-gradient-to-t from-amber-500 to-amber-400 shadow-md shadow-amber-500/20"
@@ -303,10 +324,12 @@ export default function HourlySalesChart({
                     />
                   </div>
 
-                  {/* X-Axis Hour Label */}
+                  {/* X-Axis Day / Hour Label */}
                   <span
-                    className={`text-[9px] mt-1.5 font-bold transition-colors truncate max-w-full ${
-                      isPeak
+                    className={`text-[9.5px] mt-1.5 font-bold transition-colors truncate max-w-full ${
+                      isSelected
+                        ? "text-amber-400 font-black underline underline-offset-2"
+                        : isPeak
                         ? "text-amber-400 font-extrabold"
                         : isHovered
                         ? "text-white"
@@ -359,12 +382,13 @@ export default function HourlySalesChart({
               {/* Data Points */}
               {wavePath.points.map((p, idx) => {
                 const isHovered = hoveredIndex === idx;
-                const isPeak = p.bucket.hour === peakBucket.hour;
+                const isSelected = selectedBarIndex === idx;
+                const isPeak = p.bucket.label === peakBucket.label;
 
                 return (
                   <g
                     key={idx}
-                    onClick={() => onSelectHour?.(p.bucket)}
+                    onClick={() => handleBarClick(p.bucket, idx)}
                     onMouseEnter={() => setHoveredIndex(idx)}
                     onMouseLeave={() => setHoveredIndex(null)}
                     className="cursor-pointer"
@@ -372,9 +396,11 @@ export default function HourlySalesChart({
                     <circle
                       cx={p.x}
                       cy={p.y}
-                      r={isPeak ? 7 : isHovered ? 6 : 4}
+                      r={isSelected ? 8 : isPeak ? 7 : isHovered ? 6 : 4}
                       className={`transition-all ${
-                        isPeak
+                        isSelected
+                          ? "fill-white stroke-amber-400 stroke-3 drop-shadow-lg"
+                          : isPeak
                           ? "fill-amber-300 stroke-amber-600 stroke-2 drop-shadow-md"
                           : isHovered
                           ? "fill-white stroke-amber-500 stroke-2"
@@ -387,14 +413,12 @@ export default function HourlySalesChart({
             </svg>
 
             {/* X-Axis labels */}
-            <div className="flex justify-between text-[9px] font-bold text-slate-400 px-2 pt-1">
-              {data
-                .filter((_, i) => i % 2 === 0 || i === data.length - 1)
-                .map((b) => (
-                  <span key={b.hour} className={b.hour === peakBucket.hour ? "text-amber-400 font-black" : ""}>
-                    {b.label}
-                  </span>
-                ))}
+            <div className="flex justify-between text-[9.5px] font-bold text-slate-400 px-2 pt-1">
+              {activeDataset.map((b) => (
+                <span key={b.label} className={b.label === peakBucket.label ? "text-amber-400 font-black" : ""}>
+                  {b.label}
+                </span>
+              ))}
             </div>
           </div>
         )}
@@ -408,11 +432,11 @@ export default function HourlySalesChart({
       >
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-amber-500" />
-          Active Metric: <strong>{metric}</strong>
+          Metric: <strong>{metric}</strong>
         </span>
-        <span className="font-mono">Max Peak: {formatValue(maxValue)}</span>
+        <span className="font-mono">Peak: {formatValue(maxValue)}</span>
         <span className="flex items-center gap-1 text-amber-400 font-bold">
-          <Clock size={11} /> 16 Hourly Operating Windows
+          <Clock size={11} /> {isWeeklyView ? "7-Day Daily Granularity" : "16 Hourly Operating Windows"}
         </span>
       </div>
     </div>

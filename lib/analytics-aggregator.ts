@@ -1,6 +1,6 @@
 /**
  * Analytics Data Aggregation Utility
- * Transforms raw POS orders and store items into structured hourly metrics,
+ * Transforms raw POS orders and store items into structured hourly and daily metrics,
  * product rankings, ingredient burn rates, and financial summaries.
  */
 
@@ -57,6 +57,26 @@ export interface HourlyBucket {
   };
 }
 
+export interface DailyBucket {
+  dayKey: string; // e.g. "2026-08-21"
+  label: string; // e.g. "Fri"
+  windowTitle: string; // e.g. "Friday, Aug 21 Summary"
+  revenueUSD: number;
+  revenueKHR: number;
+  orders: number;
+  orderRatePerHour: number; // avg orders per open hour
+  avgTicketUSD: number;
+  avgTransactionSpeedSec: number;
+  isPeak: boolean;
+  pctOfDaily: number; // pct of 7-day total
+  topSellingItems: HourlyItemBreakdown[];
+  paymentSplit: {
+    cashUSD: number;
+    khqrUSD: number;
+    cardUSD: number;
+  };
+}
+
 export interface RankedProduct {
   name: string;
   category: string;
@@ -76,7 +96,7 @@ export interface IngredientUsage {
   capacity: number;
   unit: string;
   depletionPct: number;
-  status: "healthy" | "moderate" | "critical";
+  status: "healthy" | "moderate" | "critical" | "po_issued";
   statusLabel: string;
   burnRatePerOrder: number;
   hoursUntilDepletion: number;
@@ -104,6 +124,7 @@ export interface StaffUtilization {
 
 export interface AnalyticsSummary {
   dateRangeLabel: string;
+  isWeeklyView: boolean;
   totalRevenueUSD: number;
   totalRevenueKHR: number;
   totalOrders: number;
@@ -116,6 +137,7 @@ export interface AnalyticsSummary {
   peakHourRevenueUSD: number;
   peakHourOrders: number;
   hourlyData: HourlyBucket[];
+  dailyData: DailyBucket[];
   topProducts: RankedProduct[];
   ingredients: IngredientUsage[];
   staff: StaffUtilization[];
@@ -178,6 +200,7 @@ export function aggregatePOSAnalytics(
 ): AnalyticsSummary {
   const khrRate = options.khrRate || KHR_EXCHANGE_RATE;
   const preset = options.datePreset || "today";
+  const isWeeklyView = preset === "7days" || preset === "30days";
 
   // Filter non-voided valid orders
   const validOrders = posOrders.filter((o) => o.status !== "Void" && o.status !== "CANCELLED");
@@ -188,11 +211,11 @@ export function aggregatePOSAnalytics(
   // Base simulation weights for 6 AM - 9 PM curve
   const baselineRevenue = [
     18, 42, 115, 145, 98, 76, 85, 68, 54, 88, 92, 64, 48, 36, 22, 12,
-  ].map((val) => Number((val * multiplier).toFixed(2)));
+  ].map((val) => Number((val * (preset === "7days" ? 1.0 : multiplier)).toFixed(2)));
 
   const baselineOrders = [
     3, 8, 22, 28, 18, 14, 16, 12, 10, 16, 17, 12, 9, 7, 4, 2,
-  ].map((val) => Math.max(1, Math.round(val * multiplier)));
+  ].map((val) => Math.max(1, Math.round(val * (preset === "7days" ? 1.0 : multiplier))));
 
   // Simulated items per hour
   const defaultHourItems: Record<number, HourlyItemBreakdown[]> = {
@@ -292,8 +315,8 @@ export function aggregatePOSAnalytics(
     (defaultHourItems[h.hour] || []).forEach((it) => {
       defaultItemsMap[it.name] = {
         name: it.name,
-        qty: Math.max(1, Math.round(it.qty * multiplier)),
-        revenueUSD: Number((it.revenueUSD * multiplier).toFixed(2)),
+        qty: Math.max(1, Math.round(it.qty * (preset === "7days" ? 1.0 : multiplier))),
+        revenueUSD: Number((it.revenueUSD * (preset === "7days" ? 1.0 : multiplier)).toFixed(2)),
         category: it.category,
       };
     });
@@ -305,6 +328,55 @@ export function aggregatePOSAnalytics(
       cashUSD: Number((rev * 0.35).toFixed(2)),
       khqrUSD: Number((rev * 0.55).toFixed(2)),
       cardUSD: Number((rev * 0.1).toFixed(2)),
+    };
+  });
+
+  // ── 7-Day Simulation Buckets ────────────────────────────────────────────────
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const baselineDailyRev = [680, 740, 810, 860, 950, 1140, 780];
+  const baselineDailyOrders = [118, 126, 138, 145, 162, 192, 132];
+
+  let maxDayRev = 0;
+  let peakDayIdx = 5; // Saturday
+
+  baselineDailyRev.forEach((rev, idx) => {
+    if (rev > maxDayRev) {
+      maxDayRev = rev;
+      peakDayIdx = idx;
+    }
+  });
+
+  const total7DayRevenueUSD = baselineDailyRev.reduce((s, r) => s + r, 0);
+
+  const dailyData: DailyBucket[] = daysOfWeek.map((d, idx) => {
+    const rev = baselineDailyRev[idx];
+    const ords = baselineDailyOrders[idx];
+    const isPeak = idx === peakDayIdx;
+    const pctOfDaily = Number(((rev / total7DayRevenueUSD) * 100).toFixed(1));
+
+    return {
+      dayKey: `DAY-${idx + 1}`,
+      label: d,
+      windowTitle: `${d} Full Day Sales Summary`,
+      revenueUSD: rev,
+      revenueKHR: Math.round(rev * khrRate),
+      orders: ords,
+      orderRatePerHour: Number((ords / 16).toFixed(1)),
+      avgTicketUSD: Number((rev / ords).toFixed(2)),
+      avgTransactionSpeedSec: isPeak ? 34 : 44,
+      isPeak,
+      pctOfDaily,
+      topSellingItems: [
+        { name: "Cambodian Iced Coffee", qty: Math.round(ords * 0.28), revenueUSD: Number((ords * 0.28 * 3.5).toFixed(2)), category: "Iced" },
+        { name: "Espresso Tonic", qty: Math.round(ords * 0.19), revenueUSD: Number((ords * 0.19 * 4.0).toFixed(2)), category: "Specialty" },
+        { name: "Oat Milk Latte", qty: Math.round(ords * 0.17), revenueUSD: Number((ords * 0.17 * 4.5).toFixed(2)), category: "Hot" },
+        { name: "Croissant Breakfast Combo", qty: Math.round(ords * 0.12), revenueUSD: Number((ords * 0.12 * 6.5).toFixed(2)), category: "Combos" },
+      ],
+      paymentSplit: {
+        cashUSD: Number((rev * 0.34).toFixed(2)),
+        khqrUSD: Number((rev * 0.58).toFixed(2)),
+        cardUSD: Number((rev * 0.08).toFixed(2)),
+      },
     };
   });
 
@@ -444,28 +516,32 @@ export function aggregatePOSAnalytics(
   let maxHourlyRev = 0;
   let peakHourNum = 9;
 
-  STANDARD_HOURS.forEach((h) => {
-    const bucket = hourlyMap[h.hour];
-    grandTotalRevenueUSD += bucket.revenueUSD;
-    grandTotalOrders += bucket.orders;
-    if (bucket.revenueUSD > maxHourlyRev) {
-      maxHourlyRev = bucket.revenueUSD;
-      peakHourNum = h.hour;
-    }
-  });
+  if (isWeeklyView) {
+    grandTotalRevenueUSD = total7DayRevenueUSD;
+    grandTotalOrders = baselineDailyOrders.reduce((s, o) => s + o, 0);
+  } else {
+    STANDARD_HOURS.forEach((h) => {
+      const bucket = hourlyMap[h.hour];
+      grandTotalRevenueUSD += bucket.revenueUSD;
+      grandTotalOrders += bucket.orders;
+      if (bucket.revenueUSD > maxHourlyRev) {
+        maxHourlyRev = bucket.revenueUSD;
+        peakHourNum = h.hour;
+      }
+    });
+  }
 
   grandTotalRevenueUSD = Number(grandTotalRevenueUSD.toFixed(2));
   const grandTotalRevenueKHR = Math.round(grandTotalRevenueUSD * khrRate);
   const avgTicketUSD = grandTotalOrders > 0 ? Number((grandTotalRevenueUSD / grandTotalOrders).toFixed(2)) : 0;
 
-  // Build final HourlyBuckets with speed estimates and payment splits
+  // Build final HourlyBuckets
   const hourlyData: HourlyBucket[] = STANDARD_HOURS.map((h) => {
     const bucket = hourlyMap[h.hour];
     const isPeak = h.hour === peakHourNum;
     const pctOfDaily = grandTotalRevenueUSD > 0 ? Number(((bucket.revenueUSD / grandTotalRevenueUSD) * 100).toFixed(1)) : 0;
     const avgTicket = bucket.orders > 0 ? Number((bucket.revenueUSD / bucket.orders).toFixed(2)) : 0;
 
-    // Transaction speed: rush hours faster (~36s), off-peak (~52s)
     const speedSec = isPeak ? 36 : bucket.orders > 15 ? 42 : 52;
 
     const topItems = Object.values(bucket.items)
@@ -483,7 +559,7 @@ export function aggregatePOSAnalytics(
       revenueUSD: Number(bucket.revenueUSD.toFixed(2)),
       revenueKHR: Math.round(bucket.revenueUSD * khrRate),
       orders: bucket.orders,
-      orderRatePerHour: bucket.orders, // orders/hour
+      orderRatePerHour: bucket.orders,
       avgTicketUSD: avgTicket,
       avgTransactionSpeedSec: speedSec,
       isPeak,
@@ -497,7 +573,13 @@ export function aggregatePOSAnalytics(
     };
   });
 
-  const peakHourBucket = hourlyData.find((h) => h.isPeak) || hourlyData[3];
+  const peakHourBucket = isWeeklyView
+    ? {
+        label: dailyData[peakDayIdx].label,
+        revenueUSD: dailyData[peakDayIdx].revenueUSD,
+        orders: dailyData[peakDayIdx].orders,
+      }
+    : hourlyData.find((h) => h.isPeak) || hourlyData[3];
 
   // Top products ranking
   const allProducts = Object.values(productMap).sort((a, b) => b.revenueUSD - a.revenueUSD);
@@ -519,7 +601,7 @@ export function aggregatePOSAnalytics(
   const grossProfitUSD = Number((grandTotalRevenueUSD - totalCOGSUSD).toFixed(2));
   const grossMarginPercent = grandTotalRevenueUSD > 0 ? Number(((grossProfitUSD / grandTotalRevenueUSD) * 100).toFixed(1)) : 68.5;
 
-  // ── Actionable Ingredient Burn & Depletion Velocity Calculation ───────────────
+  // Ingredient Burn & Depletion Velocity Calculation
   const totalCoffeeDrinks = Math.round(totalItemsSold * 0.85);
   const totalMilkDrinks = Math.round(totalItemsSold * 0.55);
   const totalOatDrinks = Math.round(totalItemsSold * 0.22);
@@ -532,7 +614,6 @@ export function aggregatePOSAnalytics(
   const cupsBurnPcs = totalItemsSold;
   const iceBurnKg = Number((totalItemsSold * 0.12).toFixed(1));
 
-  // Current operating hour index (e.g. 7 hours into an 8-hour shift)
   const currentElapsedHours = 7;
   const avgHourlyBurn = (burn: number) => Number((burn / Math.max(currentElapsedHours, 1)).toFixed(2));
 
@@ -658,7 +739,7 @@ export function aggregatePOSAnalytics(
     };
   });
 
-  // ── Operational Staff Utilization Metrics ────────────────────────────────────
+  // Staff Utilization Metrics
   const staff: StaffUtilization[] = [
     {
       id: "staff-01",
@@ -666,7 +747,7 @@ export function aggregatePOSAnalytics(
       role: "Lead Cashier",
       shift: "Shift #1 (7:00 AM – 3:00 PM)",
       avatarBg: "bg-amber-600",
-      ticketsPerHour: Number(((grandTotalOrders * 0.58) / 7).toFixed(1)),
+      ticketsPerHour: Number(((grandTotalOrders * 0.58) / (isWeeklyView ? 49 : 7)).toFixed(1)),
       activeTimePct: 84,
       idleTimePct: 16,
       totalRevenueHandledUSD: Number((grandTotalRevenueUSD * 0.62).toFixed(2)),
@@ -679,7 +760,7 @@ export function aggregatePOSAnalytics(
       role: "Head Barista",
       shift: "Shift #1 (7:00 AM – 3:00 PM)",
       avatarBg: "bg-emerald-600",
-      ticketsPerHour: Number(((grandTotalOrders * 0.42) / 7).toFixed(1)),
+      ticketsPerHour: Number(((grandTotalOrders * 0.42) / (isWeeklyView ? 49 : 7)).toFixed(1)),
       activeTimePct: 91,
       idleTimePct: 9,
       totalRevenueHandledUSD: Number((grandTotalRevenueUSD * 0.38).toFixed(2)),
@@ -712,6 +793,7 @@ export function aggregatePOSAnalytics(
 
   return {
     dateRangeLabel,
+    isWeeklyView,
     totalRevenueUSD: grandTotalRevenueUSD,
     totalRevenueKHR: grandTotalRevenueKHR,
     totalOrders: grandTotalOrders,
@@ -724,6 +806,7 @@ export function aggregatePOSAnalytics(
     peakHourRevenueUSD: peakHourBucket.revenueUSD,
     peakHourOrders: peakHourBucket.orders,
     hourlyData,
+    dailyData,
     topProducts,
     ingredients,
     staff,

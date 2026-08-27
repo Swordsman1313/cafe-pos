@@ -13,6 +13,7 @@ import {
   Filter,
   Layers,
   Sparkles,
+  Check,
 } from "lucide-react";
 import { IngredientUsage } from "@/lib/analytics-aggregator";
 import QuickRestockModal from "@/components/boh/QuickRestockModal";
@@ -32,6 +33,7 @@ export default function StockDepletionCard({
   const [filter, setFilter] = useState<"all" | "critical" | "moderate" | "safe">("all");
   const [sortBy, setSortBy] = useState<"depletion" | "hours" | "name">("depletion");
   const [activeRestockItem, setActiveRestockItem] = useState<IngredientUsage | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Sync if initial prop changes
   React.useEffect(() => {
@@ -41,14 +43,14 @@ export default function StockDepletionCard({
   // Counts
   const criticalCount = ingredients.filter((i) => i.status === "critical").length;
   const moderateCount = ingredients.filter((i) => i.status === "moderate").length;
-  const safeCount = ingredients.filter((i) => i.status === "healthy").length;
+  const safeCount = ingredients.filter((i) => i.status === "healthy" || i.status === "po_issued").length;
 
   // Filter & Sort
   const processedList = useMemo(() => {
     let list = [...ingredients];
     if (filter === "critical") list = list.filter((i) => i.status === "critical");
     if (filter === "moderate") list = list.filter((i) => i.status === "moderate");
-    if (filter === "safe") list = list.filter((i) => i.status === "healthy");
+    if (filter === "safe") list = list.filter((i) => i.status === "healthy" || i.status === "po_issued");
 
     if (sortBy === "depletion") {
       list.sort((a, b) => b.depletionPct - a.depletionPct);
@@ -60,8 +62,16 @@ export default function StockDepletionCard({
     return list;
   }, [ingredients, filter, sortBy]);
 
-  const handleConfirmRestock = (ingredientId: string, addedAmount: number, isDirectReplenish: boolean) => {
-    if (isDirectReplenish) {
+  // Handle instant state mutation
+  const handleConfirmRestock = (
+    ingredientId: string,
+    quantityPacks: number,
+    actionType: "replenish" | "po_issued"
+  ) => {
+    const target = ingredients.find((i) => i.id === ingredientId);
+    if (!target) return;
+
+    if (actionType === "replenish") {
       setIngredients((prev) =>
         prev.map((i) =>
           i.id === ingredientId
@@ -76,16 +86,43 @@ export default function StockDepletionCard({
             : i
         )
       );
+      setToastMessage(`Stock updated: Added ${quantityPacks} pack(s) to ${target.name}`);
       onReplenishIngredient?.(ingredientId);
+    } else if (actionType === "po_issued") {
+      setIngredients((prev) =>
+        prev.map((i) =>
+          i.id === ingredientId
+            ? {
+                ...i,
+                status: "po_issued",
+                statusLabel: "PO Issued • Pending Delivery",
+              }
+            : i
+        )
+      );
+      setToastMessage(`PO Created: Purchase Order issued for ${target.name} (${target.supplierName})`);
     }
+
+    // Auto-dismiss toast after 3.5 seconds
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
   };
 
   return (
     <div
-      className={`rounded-3xl border p-5 transition-all flex flex-col justify-between ${
+      className={`rounded-3xl border p-5 transition-all flex flex-col justify-between relative ${
         isLight ? "bg-white border-slate-200 shadow-sm" : "bg-slate-900 border-slate-800"
       }`}
     >
+      {/* ── Floating Green Toast Notification ── */}
+      {toastMessage && (
+        <div className="absolute top-4 right-4 z-40 bg-emerald-500 text-slate-950 px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 border border-emerald-300">
+          <CheckCircle2 size={16} className="text-slate-950 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -193,6 +230,7 @@ export default function StockDepletionCard({
           {processedList.map((item) => {
             const isCritical = item.status === "critical"; // > 85%
             const isModerate = item.status === "moderate"; // 60 - 85%
+            const isPOIssued = item.status === "po_issued";
 
             return (
               <div
@@ -203,11 +241,15 @@ export default function StockDepletionCard({
                       ? "bg-rose-50/60 border-rose-200"
                       : isModerate
                       ? "bg-amber-50/40 border-amber-200/80"
+                      : isPOIssued
+                      ? "bg-amber-50/70 border-amber-300"
                       : "bg-slate-50 border-slate-100"
                     : isCritical
                     ? "bg-rose-950/20 border-rose-500/30 shadow-xs"
                     : isModerate
                     ? "bg-amber-950/20 border-amber-500/20"
+                    : isPOIssued
+                    ? "bg-amber-950/30 border-amber-500/30 shadow-xs"
                     : "bg-slate-800/40 border-slate-700/40"
                 }`}
               >
@@ -234,11 +276,19 @@ export default function StockDepletionCard({
                         </span>
                         <span className="text-slate-500">·</span>
                         <span className={`font-bold flex items-center gap-1 ${
-                          isCritical ? "text-rose-400 font-extrabold animate-pulse" : isModerate ? "text-amber-400" : "text-emerald-400"
+                          isCritical
+                            ? "text-rose-400 font-extrabold animate-pulse"
+                            : isPOIssued
+                            ? "text-amber-400"
+                            : isModerate
+                            ? "text-amber-400"
+                            : "text-emerald-400"
                         }`}>
                           <Clock size={10} />
                           {isCritical
                             ? `Empty in ~${item.hoursUntilDepletion} hrs!`
+                            : isPOIssued
+                            ? "PO Pending Delivery"
                             : `Safe for ~${item.hoursUntilDepletion} hrs`}
                         </span>
                       </div>
@@ -249,7 +299,15 @@ export default function StockDepletionCard({
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <div className="text-right pr-1">
                       <span className={`font-black text-xs block ${
-                        isCritical ? "text-rose-500" : isModerate ? "text-amber-500" : isLight ? "text-slate-900" : "text-white"
+                        isCritical
+                          ? "text-rose-500"
+                          : isPOIssued
+                          ? "text-amber-400"
+                          : isModerate
+                          ? "text-amber-500"
+                          : isLight
+                          ? "text-slate-900"
+                          : "text-white"
                       }`}>
                         {item.currentUsed} / {item.capacity} {item.unit}
                       </span>
@@ -265,13 +323,15 @@ export default function StockDepletionCard({
                       className={`px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer ${
                         isCritical
                           ? "bg-rose-500 hover:bg-rose-400 text-white animate-pulse"
+                          : isPOIssued
+                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30"
                           : isModerate
                           ? "bg-amber-500 hover:bg-amber-400 text-slate-950"
                           : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
                       }`}
                     >
                       <ShoppingCart size={13} />
-                      <span>{isCritical ? "Restock Now" : "Reorder"}</span>
+                      <span>{isCritical ? "Restock Now" : isPOIssued ? "PO Pending" : "Manage"}</span>
                     </button>
                   </div>
                 </div>
@@ -284,6 +344,8 @@ export default function StockDepletionCard({
                       className={`h-full rounded-full transition-all duration-700 ${
                         isCritical
                           ? "bg-gradient-to-r from-rose-600 via-rose-500 to-red-400 shadow-md shadow-rose-500/50"
+                          : isPOIssued
+                          ? "bg-gradient-to-r from-amber-600 to-amber-400 shadow-xs shadow-amber-500/30"
                           : isModerate
                           ? "bg-gradient-to-r from-amber-600 to-amber-400 shadow-xs shadow-amber-500/30"
                           : "bg-gradient-to-r from-emerald-600 to-emerald-400"

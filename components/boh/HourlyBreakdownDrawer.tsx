@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   X,
   Clock,
@@ -15,10 +15,10 @@ import {
   TrendingUp,
   Award,
 } from "lucide-react";
-import { HourlyBucket } from "@/lib/analytics-aggregator";
+import { HourlyBucket, DailyBucket } from "@/lib/analytics-aggregator";
 
 interface HourlyBreakdownDrawerProps {
-  bucket: HourlyBucket | null;
+  bucket: HourlyBucket | DailyBucket | null;
   onClose: () => void;
   isLight?: boolean;
 }
@@ -28,6 +28,17 @@ export default function HourlyBreakdownDrawer({
   onClose,
   isLight = false,
 }: HourlyBreakdownDrawerProps) {
+  // Esc key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   if (!bucket) return null;
 
   const totalRev = bucket.revenueUSD;
@@ -36,8 +47,12 @@ export default function HourlyBreakdownDrawer({
   const cardPct = totalRev > 0 ? Math.max(0, 100 - cashPct - khqrPct) : 10;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div
+        onClick={(e) => e.stopPropagation()}
         className={`w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ${
           isLight ? "bg-white text-slate-900 border-l border-slate-200" : "bg-slate-900 text-white border-l border-slate-800"
         }`}
@@ -55,7 +70,7 @@ export default function HourlyBreakdownDrawer({
                     {bucket.windowTitle}
                   </h2>
                   <p className={`text-[11px] font-medium ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                    Hourly Ring-Up Velocity &amp; Item Breakdown
+                    Window Performance &amp; Item Breakdown
                   </p>
                 </div>
               </div>
@@ -70,20 +85,20 @@ export default function HourlyBreakdownDrawer({
             </button>
           </div>
 
-          {/* Peak Banner if peak hour */}
+          {/* Peak Banner if peak bucket */}
           {bucket.isPeak && (
             <div className="my-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/30 flex items-center justify-between">
               <div className="flex items-center gap-2 text-amber-400 text-xs font-black">
                 <Flame size={16} className="fill-amber-400 animate-pulse" />
-                <span>DAY'S HIGHEST RUSH WINDOW</span>
+                <span>HIGHEST VOLUME WINDOW</span>
               </div>
               <span className="text-[10.5px] font-bold text-amber-300 bg-amber-500/30 px-2 py-0.5 rounded-md">
-                {bucket.pctOfDaily}% of Today's Sales
+                {bucket.pctOfDaily}% of Total Sales
               </span>
             </div>
           )}
 
-          {/* ── 4 Quick Key Metrics ── */}
+          {/* ── 4 Key Metrics ── */}
           <div className="grid grid-cols-2 gap-2.5 my-4">
             <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-slate-800/60 border-slate-700/60"}`}>
               <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Revenue</span>
@@ -126,7 +141,7 @@ export default function HourlyBreakdownDrawer({
             </div>
           </div>
 
-          {/* ── Top-Selling Items in This Hour ── */}
+          {/* ── Top-Selling Items in This Window ── */}
           <div className="space-y-2 mt-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold flex items-center gap-1.5 text-amber-500">
@@ -168,7 +183,7 @@ export default function HourlyBreakdownDrawer({
             </div>
           </div>
 
-          {/* ── Payment Method Split for This Hour ── */}
+          {/* ── Payment Method Split ── */}
           <div className="space-y-2 mt-5 border-t pt-4 border-slate-200/60 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold flex items-center gap-1.5">
@@ -221,7 +236,7 @@ export default function HourlyBreakdownDrawer({
             onClick={onClose}
             className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 cursor-pointer"
           >
-            Close Hourly Inspection
+            Close Breakdown Inspection
           </button>
         </div>
       </div>
