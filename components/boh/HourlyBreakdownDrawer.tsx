@@ -31,7 +31,7 @@ export default function HourlyBreakdownDrawer({
   isLight = false,
 }: HourlyBreakdownDrawerProps) {
   const [activeBucket, setActiveBucket] = useState<HourlyBucket | DailyBucket | null>(bucket);
-  const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const isClosingRef = useRef<boolean>(false);
 
   // Sync bucket prop and manage mounting/animating
@@ -41,20 +41,31 @@ export default function HourlyBreakdownDrawer({
       isClosingRef.current = false;
       // Trigger GPU entrance on next frame
       requestAnimationFrame(() => {
-        setIsVisible(true);
+        setIsOpen(true);
       });
     } else {
-      setIsVisible(false);
+      setIsOpen(false);
     }
   }, [bucket]);
 
-  // Clean exit animation before unmounting
+  // AntD Scroll Locking: Prevent background double-scroll jank
+  useEffect(() => {
+    if (activeBucket) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [activeBucket]);
+
+  // Clean reverse transition (slide-out) before unmounting
   const handleTriggerClose = () => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-    setIsVisible(false);
+    setIsOpen(false);
 
-    // Allow 300ms cubic-bezier transition to play out smoothly
+    // Allow 300ms AntD cubic-bezier transition to play out smoothly
     setTimeout(() => {
       onClose();
       setActiveBucket(null);
@@ -62,7 +73,7 @@ export default function HourlyBreakdownDrawer({
     }, 300);
   };
 
-  // Esc key listener
+  // Esc key listener for smooth reverse slide-out
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -85,21 +96,25 @@ export default function HourlyBreakdownDrawer({
 
   return (
     <>
-      {/* ── 1. Lightweight GPU Backdrop Scrim with Opacity Fade ── */}
+      {/* ── 1. AntD Lightweight Flat Scrim with Opacity Transition ── */}
       <div
         onClick={handleTriggerClose}
-        className={`fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] transition-opacity duration-200 ease-out cursor-pointer ${
-          isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 z-40 bg-black/45 transition-opacity duration-300 ease-in-out cursor-pointer ${
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         aria-hidden="true"
       />
 
-      {/* ── 2. 60fps GPU-Accelerated Hardware Transform Slide-Over Panel ── */}
+      {/* ── 2. Exact AntD 60fps GPU Hardware Transform Slide-Over Panel ── */}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md h-full shadow-2xl flex flex-col will-change-transform transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          isVisible
-            ? "translate-x-0 opacity-100 pointer-events-auto"
-            : "translate-x-full opacity-0 pointer-events-none"
+        style={{
+          transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)",
+          willChange: "transform",
+        }}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md h-full shadow-2xl flex flex-col ${
+          isOpen
+            ? "translate-x-0 pointer-events-auto"
+            : "translate-x-full pointer-events-none"
         } ${
           isLight
             ? "bg-white text-slate-900 border-l border-slate-200"
