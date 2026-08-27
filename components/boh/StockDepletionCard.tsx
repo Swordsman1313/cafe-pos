@@ -12,9 +12,32 @@ import {
   Sparkles,
   Info,
   Package,
+  Coffee,
+  Droplets,
+  Wheat,
+  Snowflake,
 } from "lucide-react";
 import { IngredientUsage } from "@/lib/analytics-aggregator";
 import QuickRestockModal from "./QuickRestockModal";
+
+export function getIngredientIcon(id: string) {
+  switch (id) {
+    case "beans":
+      return <Coffee size={17} className="text-amber-600 dark:text-amber-400" />;
+    case "milk":
+      return <Droplets size={17} className="text-blue-500" />;
+    case "oatmilk":
+      return <Wheat size={17} className="text-amber-500" />;
+    case "syrup":
+      return <Sparkles size={17} className="text-amber-600 dark:text-amber-300" />;
+    case "cups":
+      return <Package size={17} className="text-rose-500" />;
+    case "ice":
+      return <Snowflake size={17} className="text-cyan-500" />;
+    default:
+      return <Package size={17} className="text-amber-500" />;
+  }
+}
 
 interface StockDepletionCardProps {
   ingredients: IngredientUsage[];
@@ -211,7 +234,7 @@ export default function StockDepletionCard({
           </div>
         </div>
 
-        {/* ── Ingredient Usage Items ── */}
+        {/* ── Ingredient Usage Items (With Lucide SVG Icons, No Emojis) ── */}
         <div className="space-y-2.5 pt-1">
           {processedList.map((item) => {
             const isCritical = item.status === "critical"; // > 85%
@@ -242,9 +265,9 @@ export default function StockDepletionCard({
                 {/* Main Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-2xl shrink-0 p-1 bg-black/10 rounded-xl select-none">
-                      {item.icon}
-                    </span>
+                    <div className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+                      {getIngredientIcon(item.id)}
+                    </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`font-bold text-xs truncate ${isLight ? "text-slate-900" : "text-white"}`}>
@@ -332,7 +355,7 @@ export default function StockDepletionCard({
                   </div>
                 </div>
 
-                {/* ── Slim Clean Progress Bar (Repeating percentage labels removed) ── */}
+                {/* ── Slim Clean Progress Bar ── */}
                 <div className="mt-2">
                   <div className={`h-1.5 rounded-full overflow-hidden ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
                     <div

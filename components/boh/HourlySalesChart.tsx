@@ -266,7 +266,7 @@ export default function HourlySalesChart({
       >
         {chartStyle === "bar" ? (
           /* ── 1. Column Bars View with Scaled Fill ── */
-          <div className="flex items-end gap-1 sm:gap-2 h-52 sm:h-56 w-full pt-4 pb-1">
+          <div className="flex items-end gap-1 sm:gap-2 h-44 sm:h-48 w-full pt-4 pb-1">
             {activeDataset.map((bucket, idx) => {
               const val = getValue(bucket);
               // Scale bar heights proportionally up to 88% so peak bar stays within view with amount label
@@ -347,7 +347,7 @@ export default function HourlySalesChart({
           </div>
         ) : (
           /* ── 2. Smooth Bézier Line Wave View with Full Height ── */
-          <div className="w-full h-52 sm:h-56 pt-2 pb-1 flex flex-col justify-between">
+          <div className="w-full h-44 sm:h-48 pt-2 pb-1 flex flex-col justify-between">
             <svg viewBox="0 0 800 200" className="w-full h-full overflow-visible">
               <defs>
                 <linearGradient id="lineAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">

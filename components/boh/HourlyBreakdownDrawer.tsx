@@ -59,43 +59,44 @@ export default function HourlyBreakdownDrawer({
 
       {/* ── Dedicated Right-Side Overlay Slide-Over Panel (z-50) ── */}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ${
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 ${
           isLight
             ? "bg-white text-slate-900 border-l border-slate-200"
             : "bg-slate-900 text-white border-l border-slate-800"
         }`}
       >
-        {/* ── Top Header Section (with clean margins & padding) ── */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b pb-4 border-slate-200/60 dark:border-slate-800">
-            <div className="flex items-center gap-3 min-w-0 pr-2">
-              <div className="h-9 w-9 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold shrink-0">
-                <Clock size={18} />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base font-extrabold truncate leading-tight">
-                  {bucket.windowTitle}
-                </h2>
-                <p className={`text-[11px] font-medium mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                  Hourly Drill-Down, Receipts &amp; Prep Speed
-                </p>
-              </div>
+        {/* ── 1. FIXED TOP HEADER (Pinned, never cut off or scrolled away) ── */}
+        <div className="p-5 border-b shrink-0 flex items-center justify-between border-slate-200/60 dark:border-slate-800 bg-inherit">
+          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+            <div className="h-9 w-9 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold shrink-0">
+              <Clock size={18} />
             </div>
-
-            {/* Distinct ✕ Close Button with generous click target */}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close Drill-Down Panel"
-              className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0"
-            >
-              <X size={17} />
-            </button>
+            <div className="min-w-0">
+              <h2 className="text-base font-extrabold truncate leading-tight">
+                {bucket.windowTitle}
+              </h2>
+              <p className={`text-[11px] font-medium mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+                Hourly Drill-Down, Receipts &amp; Prep Speed
+              </p>
+            </div>
           </div>
 
-          {/* Peak Volume Banner with clean p-3.5 padding */}
+          {/* Distinct ✕ Close Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close Drill-Down Panel"
+            className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0"
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        {/* ── 2. SCROLLABLE DRAWER BODY ── */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Peak Banner if peak bucket */}
           {bucket.isPeak && (
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/30 flex items-center justify-between">
               <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-black">
                 <Flame size={16} className="fill-amber-500 animate-pulse" />
                 <span>DAY'S HIGHEST PEAK VOLUME</span>
@@ -106,9 +107,9 @@ export default function HourlyBreakdownDrawer({
             </div>
           )}
 
-          {/* ── 4 Key Metric Summary Cards with p-3.5 padding ── */}
+          {/* ── 4 Key Metric Summary Cards ── */}
           <div className="grid grid-cols-2 gap-2.5">
-            <div className={`p-3.5 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
               <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Revenue</span>
               <span className={`text-xl font-black block leading-tight ${isLight ? "text-slate-900" : "text-amber-400"}`}>
                 ${bucket.revenueUSD.toFixed(2)}
@@ -118,7 +119,7 @@ export default function HourlyBreakdownDrawer({
               </span>
             </div>
 
-            <div className={`p-3.5 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
               <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Order Volume</span>
               <span className={`text-xl font-black block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
                 {bucket.orders} <span className="text-xs font-bold text-slate-400">tickets</span>
@@ -128,7 +129,7 @@ export default function HourlyBreakdownDrawer({
               </span>
             </div>
 
-            <div className={`p-3.5 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
               <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Avg Ticket</span>
               <span className={`text-xl font-black block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
                 ${bucket.avgTicketUSD.toFixed(2)}
@@ -138,7 +139,7 @@ export default function HourlyBreakdownDrawer({
               </span>
             </div>
 
-            <div className={`p-3.5 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
               <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Avg Prep Speed</span>
               <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 block leading-tight">
                 {bucket.avgTransactionSpeedSec}s <span className="text-xs font-bold text-slate-400">/ ticket</span>
@@ -149,7 +150,7 @@ export default function HourlyBreakdownDrawer({
             </div>
           </div>
 
-          {/* ── Top 3 Items Sold in This Window ── */}
+          {/* ── Top Items Sold in This Window ── */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
@@ -294,8 +295,8 @@ export default function HourlyBreakdownDrawer({
           </div>
         </div>
 
-        {/* ── Drawer Close Button ── */}
-        <div className="pt-4 border-t mt-4 border-slate-200/60 dark:border-slate-800">
+        {/* ── 3. FIXED BOTTOM ACTION (Pinned at bottom) ── */}
+        <div className="p-4 border-t shrink-0 border-slate-200/60 dark:border-slate-800 bg-inherit">
           <button
             type="button"
             onClick={onClose}

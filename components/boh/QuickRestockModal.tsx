@@ -72,7 +72,9 @@ export default function QuickRestockModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-3 border-slate-200/60 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl select-none">{ingredient.icon}</span>
+            <div className="h-9 w-9 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+              <Package size={18} className="text-amber-500" />
+            </div>
             <div>
               <h2 className="text-sm font-extrabold flex items-center gap-1.5">
                 Restock: {ingredient.name}

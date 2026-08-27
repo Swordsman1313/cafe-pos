@@ -316,7 +316,7 @@ export default function CafeDashboard() {
           <div>
             <div className="flex items-center gap-2.5">
               <div className="h-8 w-8 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md shadow-amber-500/20">
-                ☕
+                <Coffee size={17} className="text-slate-950 stroke-[2.5]" />
               </div>
               <div>
                 <h1 className="text-base sm:text-lg font-extrabold tracking-tight flex items-center gap-2">

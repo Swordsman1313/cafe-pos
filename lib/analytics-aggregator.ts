@@ -676,7 +676,7 @@ export function aggregatePOSAnalytics(
     {
       id: "beans",
       name: "House Espresso Beans",
-      icon: "🫘",
+      icon: "beans",
       category: "Coffee Beans",
       currentUsed: beansBurnKg,
       capacity: Number((3.5 * multiplier).toFixed(1)),
@@ -691,7 +691,7 @@ export function aggregatePOSAnalytics(
     {
       id: "milk",
       name: "Pasteurized Whole Milk",
-      icon: "🥛",
+      icon: "milk",
       category: "Dairy",
       currentUsed: milkBurnL,
       capacity: Number((18.0 * multiplier).toFixed(1)),
@@ -706,7 +706,7 @@ export function aggregatePOSAnalytics(
     {
       id: "oatmilk",
       name: "Oatbed Barista Edition",
-      icon: "🌾",
+      icon: "oatmilk",
       category: "Alt Milk",
       currentUsed: oatMilkBurnL,
       capacity: Number((6.0 * multiplier).toFixed(1)),
@@ -721,7 +721,7 @@ export function aggregatePOSAnalytics(
     {
       id: "syrup",
       name: "Madagascar Vanilla Syrup",
-      icon: "🍯",
+      icon: "syrup",
       category: "Flavors",
       currentUsed: syrupBurnL,
       capacity: Number((2.5 * multiplier).toFixed(1)),
@@ -736,7 +736,7 @@ export function aggregatePOSAnalytics(
     {
       id: "cups",
       name: "16oz Compostable Cups & Lids",
-      icon: "🥤",
+      icon: "cups",
       category: "Packaging",
       currentUsed: cupsBurnPcs,
       capacity: Math.round(200 * multiplier),
@@ -751,7 +751,7 @@ export function aggregatePOSAnalytics(
     {
       id: "ice",
       name: "Filtered Pure Tube Ice",
-      icon: "🧊",
+      icon: "ice",
       category: "Ice & Cold",
       currentUsed: iceBurnKg,
       capacity: Number((25.0 * multiplier).toFixed(1)),
