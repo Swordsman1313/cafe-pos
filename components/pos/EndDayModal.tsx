@@ -412,7 +412,7 @@ export function EndDayModal({
                     <div className="border-t border-stone-400 pt-1">Finance Approval</div>
                   </div>
                   <div className="pt-1 font-bold text-stone-600">
-                    Powered by Monakom Technology
+                    The Daily Drip · Coffee POS &amp; Back-of-House
                   </div>
                 </div>
               </div>

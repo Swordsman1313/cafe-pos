@@ -526,7 +526,7 @@ export function EndShiftModal({
                     <div className="border-t border-stone-400 pt-1">Supervisor Signature</div>
                   </div>
                   <div className="pt-1 font-bold text-stone-600">
-                    Powered by Monakom Technology
+                    The Daily Drip · Coffee POS &amp; Shift Management
                   </div>
                 </div>
               </div>

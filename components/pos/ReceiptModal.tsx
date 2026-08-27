@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { CheckCircle2, Printer, Plus, X } from "lucide-react";
+import { CheckCircle2, Printer, Plus, X, Coffee } from "lucide-react";
 
 export interface ReceiptItem {
   name: string;
@@ -50,8 +50,8 @@ export function ReceiptModal({
   order,
   onNewOrder,
   onClose,
-  storeName = "The Daily Drip - Toul Kork 592",
-  storeAddressKhmer = "ដីឡូត៍លេខ០១ ផ្លូវ៥៩២ កែងផ្លូវ៣០៦ បឹងកក់ទី២ ទួលគោក រាជធានីភ្នំពេញ",
+  storeName = "The Daily Drip — Toul Kork",
+  storeAddressKhmer = "ផ្លូវ៥៩២ កែងផ្លូវ៣០៦ ខណ្ឌទួលគោក រាជធានីភ្នំពេញ",
   vattin = "L001-901503056",
   exchangeRate = 4100,
 }: ReceiptModalProps) {
@@ -67,7 +67,6 @@ export function ReceiptModal({
   const changeKHR = order.changeKHR || Math.round(changeUSD * exchangeRate);
 
   const rawTicket = order.ticketNumber || "01";
-  // Extract number for big queue display (e.g. "T-269" -> "269" or "31")
   const displayQueueNumber = rawTicket.replace(/^[^\d]*/, "") || rawTicket;
 
   const handlePrint = () => {
@@ -90,9 +89,9 @@ export function ReceiptModal({
             </div>
             <div>
               <h2 className="text-xs sm:text-sm font-black text-stone-900 leading-tight">
-                Commercial Invoice #{order.ticketNumber}
+                Order #{order.ticketNumber} Completed
               </h2>
-              <p className="text-[10px] font-semibold text-emerald-700">Payment Confirmed · {order.paymentMethod}</p>
+              <p className="text-[10px] font-semibold text-emerald-700">Receipt Ready · {order.paymentMethod}</p>
             </div>
           </div>
 
@@ -106,87 +105,72 @@ export function ReceiptModal({
           </button>
         </div>
 
-        {/* ── THERMAL RECEIPT SLIP CONTAINER (Exact Monakom POS Standard) ── */}
+        {/* ── THE DAILY DRIP THERMAL RECEIPT SLIP ── */}
         <div className="overflow-y-auto pr-0.5 flex-1 min-h-0 bg-stone-100/70 p-2 sm:p-3 rounded-2xl border border-stone-200/80">
           <div
             ref={receiptRef}
-            id="monakom-thermal-receipt"
+            id="daily-drip-thermal-receipt"
             className="w-full bg-white text-stone-950 p-4 sm:p-5 shadow-sm rounded-xl font-mono text-[11px] leading-relaxed border border-stone-200/60 mx-auto"
             style={{ maxWidth: "340px" }}
           >
-            {/* 1. Header Logo & Khmer Branding */}
-            <div className="text-center space-y-1 pb-2 border-b border-dashed border-stone-300">
-              <div className="inline-flex flex-col items-center justify-center">
-                {/* The Daily Drip Logo Badge */}
-                <div className="h-10 px-4 rounded-xl bg-[#4A2E1F] text-white font-black tracking-tight text-sm uppercase flex items-center justify-center leading-none shadow-xs">
-                  The Daily Drip
-                </div>
+            {/* 1. Header & Brand Identity */}
+            <div className="text-center space-y-1 pb-2.5 border-b-2 border-stone-800">
+              <div className="flex items-center justify-center gap-1.5 text-stone-900">
+                <Coffee size={18} className="text-[#4A2E1F] stroke-[2.5]" />
+                <span className="font-sans font-black text-base tracking-tight uppercase">
+                  THE DAILY DRIP
+                </span>
               </div>
-              <div className="font-sans font-bold text-xs text-stone-900 tracking-tight mt-1">
-                អរគុណ ប្រេីប្រាស់
+              <div className="text-[9.5px] font-sans font-semibold tracking-wider uppercase text-amber-900">
+                Specialty Coffee &amp; Artisan Bakery
               </div>
-              <div className="text-[10px] text-stone-600 font-sans">
-                លេខអត្តសញ្ញាណកម្ម (VATTIN) : <span className="font-semibold">{vattin}</span>
+              <div className="text-[9.5px] text-stone-600 font-sans">
+                VATTIN (លេខអត្តសញ្ញាណកម្ម): <span className="font-semibold text-stone-800">{vattin}</span>
               </div>
-              <div className="text-[9.5px] text-stone-500 font-sans leading-tight px-1">
+              <div className="text-[9px] text-stone-500 font-sans leading-tight px-1">
                 {storeAddressKhmer}
               </div>
             </div>
 
-            {/* 2. Receipt Title */}
-            <div className="text-center py-2 border-b border-dashed border-stone-300 font-sans font-black text-xs text-stone-900 tracking-wide uppercase">
-              វិក្កយបត្រ / COMMERCIAL INVOICE
+            {/* 2. Receipt Title Banner */}
+            <div className="text-center py-1.5 border-b border-dashed border-stone-300 font-sans font-black text-[11.5px] text-stone-900 tracking-wider uppercase">
+              OFFICIAL RECEIPT / វិក្កយបត្រ
             </div>
 
-            {/* 3. Key-Value Metadata */}
-            <div className="py-2 border-b border-dashed border-stone-300 space-y-0.5 text-[10.5px]">
-              <div className="flex">
-                <span className="w-36 text-stone-600 font-sans">សាខា / Store</span>
-                <span className="font-semibold text-stone-900">: {storeName}</span>
+            {/* 3. Transaction Details */}
+            <div className="py-2 border-b border-dashed border-stone-300 space-y-0.5 text-[10px]">
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-sans">Store / សាខា:</span>
+                <span className="font-semibold text-stone-900">{storeName}</span>
               </div>
-              <div className="flex">
-                <span className="w-36 text-stone-600 font-sans">កាលបរិច្ឆេទ / Date</span>
-                <span className="font-semibold text-stone-900">: {order.timestamp || new Date().toLocaleString()}</span>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-sans">Date / កាលបរិច្ឆេទ:</span>
+                <span className="font-semibold text-stone-900">{order.timestamp || new Date().toLocaleString()}</span>
               </div>
-              <div className="flex">
-                <span className="w-36 text-stone-600 font-sans">អ្នកគិតលុយ / Cashier</span>
-                <span className="font-semibold text-stone-900">: {order.cashierName || "swordsman"}</span>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-sans">Cashier / បេឡា:</span>
+                <span className="font-semibold text-stone-900">{order.cashierName || "Dara"}</span>
               </div>
-              <div className="flex">
-                <span className="w-36 text-stone-600 font-sans">វិក្កយបត្រ / Invoice Number</span>
-                <span className="font-semibold text-stone-900">: INV{displayQueueNumber.padStart(7, "0")}</span>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-sans">Invoice # / លេខ:</span>
+                <span className="font-semibold text-stone-900">#DD-{displayQueueNumber.padStart(6, "0")}</span>
               </div>
-              <div className="flex">
-                <span className="w-36 text-stone-600 font-sans">ប្រភេទកម្មង់ / Order Type</span>
-                <span className="font-semibold text-stone-900">: Counter</span>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-sans">Order Type / ប្រភេទ:</span>
+                <span className="font-bold text-stone-900 uppercase">
+                  {order.channel || "Walk-In"}{order.table ? ` (Table ${order.table})` : ""}
+                </span>
               </div>
             </div>
 
-            {/* 4. Order Channel Banner */}
-            <div className="text-center py-2 font-black font-sans text-sm tracking-wider uppercase text-stone-950 border-b border-dashed border-stone-300">
-              {order.channel || "WALK-IN"}{order.table ? ` · TABLE ${order.table}` : ""}
-            </div>
-
-            {/* 5. Items Spreadsheet Table */}
+            {/* 4. Items Table */}
             <div className="py-2">
               {/* Header Row */}
-              <div className="grid grid-cols-12 gap-1 pb-1.5 mb-1.5 border-b border-dashed border-stone-300 font-sans font-black text-[10px] text-stone-800">
-                <div className="col-span-5 text-left">
-                  <div>មុខទំនិញ</div>
-                  <div className="text-[8.5px] font-normal text-stone-500">Item Name</div>
-                </div>
-                <div className="col-span-3 text-right">
-                  <div>តម្លៃ</div>
-                  <div className="text-[8.5px] font-normal text-stone-500">Price</div>
-                </div>
-                <div className="col-span-2 text-center">
-                  <div>ចំនួន</div>
-                  <div className="text-[8.5px] font-normal text-stone-500">QTY</div>
-                </div>
-                <div className="col-span-2 text-right">
-                  <div>សរុប</div>
-                  <div className="text-[8.5px] font-normal text-stone-500">Total</div>
-                </div>
+              <div className="grid grid-cols-12 gap-1 pb-1 mb-1.5 border-b border-stone-300 font-sans font-black text-[9.5px] text-stone-700 uppercase">
+                <div className="col-span-6 text-left">ITEM / មុខទំនិញ</div>
+                <div className="col-span-2 text-right">PRICE</div>
+                <div className="col-span-2 text-center">QTY</div>
+                <div className="col-span-2 text-right">TOTAL</div>
               </div>
 
               {/* Items List */}
@@ -196,15 +180,15 @@ export function ReceiptModal({
                   const modText = item.modifiers || item.customization;
                   return (
                     <div key={idx} className="grid grid-cols-12 gap-1 text-[10.5px] items-start">
-                      <div className="col-span-5 text-left">
+                      <div className="col-span-6 text-left">
                         <div className="font-bold text-stone-900 leading-tight break-words">{item.name}</div>
                         {modText && (
                           <div className="text-[9px] text-stone-500 font-sans leading-tight mt-0.5 whitespace-normal break-words">
-                            {modText}
+                            • {modText}
                           </div>
                         )}
                       </div>
-                      <div className="col-span-3 text-right text-stone-700">${unitPrice.toFixed(2)}</div>
+                      <div className="col-span-2 text-right text-stone-600">${unitPrice.toFixed(2)}</div>
                       <div className="col-span-2 text-center font-bold text-stone-900">x{item.qty}</div>
                       <div className="col-span-2 text-right font-black text-stone-950">${item.total.toFixed(2)}</div>
                     </div>
@@ -213,46 +197,51 @@ export function ReceiptModal({
               </div>
             </div>
 
-            {/* 6. Totals Breakdown */}
-            <div className="border-t border-dashed border-stone-300 pt-2 space-y-1 text-[11px]">
-              <div className="flex justify-between items-center">
-                <span className="font-sans text-stone-600">សរុបបឋម / Sub Total</span>
-                <span className="font-bold">${subtotalUSD.toFixed(2)}</span>
+            {/* 5. Financial Summary */}
+            <div className="border-t border-dashed border-stone-300 pt-2 space-y-1 text-[10.5px]">
+              <div className="flex justify-between items-center text-stone-600">
+                <span>Subtotal / សរុបបឋម</span>
+                <span className="font-bold text-stone-800">${subtotalUSD.toFixed(2)}</span>
               </div>
 
               {discountUSD > 0 && (
                 <div className="flex justify-between items-center text-amber-900 font-bold">
-                  <span className="font-sans">បញ្ចុះតម្លៃ / Discount</span>
+                  <span>Discount Promo / បញ្ចុះតម្លៃ</span>
                   <span>-${discountUSD.toFixed(2)}</span>
                 </div>
               )}
 
-              <div className="border-t border-dashed border-stone-300 pt-1.5 mt-1 space-y-1">
+              <div className="flex justify-between items-center text-stone-500 text-[10px]">
+                <span>Tax VAT (10% Included)</span>
+                <span className="font-semibold">${(order.tax || (totalUSD * 0.1)).toFixed(2)}</span>
+              </div>
+
+              {/* Highlighted Total Box */}
+              <div className="border-t-2 border-b-2 border-stone-900 py-1.5 my-1 space-y-0.5">
                 <div className="flex justify-between items-center font-black text-xs text-stone-950">
-                  <span className="font-sans">សរុប / TOTAL (USD)</span>
-                  <span>${totalUSD.toFixed(2)}</span>
+                  <span className="font-sans uppercase">TOTAL (USD)</span>
+                  <span className="text-sm">${totalUSD.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center font-black text-xs text-stone-950">
-                  <span className="font-sans">សរុប / TOTAL (KHR)</span>
+                <div className="flex justify-between items-center font-black text-xs text-amber-950">
+                  <span className="font-sans uppercase">TOTAL (KHR)</span>
                   <span>{totalKHR.toLocaleString("en-US")} ៛</span>
                 </div>
               </div>
 
-              <div className="border-t border-dashed border-stone-300 pt-1.5 mt-1 space-y-0.5 text-[10.5px]">
+              {/* Payment Tender & Change */}
+              <div className="space-y-0.5 text-[10px] text-stone-700 pt-0.5">
                 <div className="flex justify-between items-center">
-                  <span className="font-sans text-stone-600">
-                    ប្រាក់ទទួល / Received ({order.paymentMethod === "CASH" ? "KHR/USD" : order.paymentMethod})
-                  </span>
+                  <span>Paid with {order.paymentMethod}</span>
                   <span className="font-bold text-stone-900">
                     {order.paymentMethod === "CASH"
-                      ? `${totalKHR.toLocaleString("en-US")} ៛`
+                      ? `${totalKHR.toLocaleString("en-US")} ៛ ($${totalUSD.toFixed(2)})`
                       : `$${totalUSD.toFixed(2)}`}
                   </span>
                 </div>
 
                 {changeUSD > 0 && (
                   <div className="flex justify-between items-center text-emerald-800 font-bold">
-                    <span className="font-sans">ប្រាក់អាប់ / Change</span>
+                    <span>Change Given / ប្រាក់អាប់</span>
                     <span>
                       ${changeUSD.toFixed(2)} / {changeKHR.toLocaleString("en-US")} ៛
                     </span>
@@ -260,25 +249,27 @@ export function ReceiptModal({
                 )}
               </div>
 
-              {/* Tax & Exchange Note */}
-              <div className="pt-2 text-center text-[9px] text-stone-500 font-sans leading-tight border-t border-dashed border-stone-300 mt-1.5">
-                តម្លៃរួមបញ្ចូលទាំងអាករ / Incl. VAT 10% អត្រាប្តូរប្រាក់ / Exchange Rate $1 = KHR {exchangeRate.toLocaleString("en-US")}៛
+              {/* Rate & Tax Footnote */}
+              <div className="pt-1.5 text-center text-[8.5px] text-stone-500 font-sans leading-tight border-t border-dashed border-stone-300 mt-1">
+                Exchange Rate: $1.00 = {exchangeRate.toLocaleString("en-US")} ៛ · All Prices Include 10% VAT
               </div>
             </div>
 
-            {/* 7. Huge Queue Ticket Number (Centered) */}
-            <div className="text-center pt-3 pb-2 border-t border-dashed border-stone-400 mt-2">
-              <div className="text-4xl font-black tracking-tight text-stone-950 leading-none">
-                {displayQueueNumber}
+            {/* 6. Distinctive Queue Token Box */}
+            <div className="text-center pt-2.5 pb-1.5 border-2 border-dashed border-stone-800 rounded-xl my-2.5 bg-stone-50/50">
+              <div className="text-[9px] font-sans font-bold text-stone-600 uppercase tracking-wider">
+                QUEUE TICKET / លេខរង់ចាំ
               </div>
-              <div className="font-sans font-bold text-[10px] text-stone-600 uppercase tracking-widest mt-1">
-                លេខរង់ចាំ / TICKET
+              <div className="text-3xl font-black tracking-tight text-stone-950 leading-tight mt-0.5">
+                #{displayQueueNumber}
               </div>
             </div>
 
-            {/* 8. Footer */}
-            <div className="text-center pt-2 border-t border-dashed border-stone-300 text-[9.5px] font-sans font-bold text-stone-600">
-              Powered by Monakom Technology
+            {/* 7. Unique Daily Drip Brand Footer */}
+            <div className="text-center pt-1.5 text-[9px] font-sans text-stone-500 space-y-0.5">
+              <div className="font-bold text-stone-700">Thank you for visiting The Daily Drip!</div>
+              <div>Enjoy your fresh handcrafted coffee ☕</div>
+              <div className="text-[8px] text-stone-400 font-mono pt-1">www.thedailydrip.cafe</div>
             </div>
           </div>
         </div>
@@ -305,17 +296,17 @@ export function ReceiptModal({
         </div>
       </div>
 
-      {/* ── PRINT-ONLY STYLESHEET (Isolates thermal slip during print) ── */}
+      {/* ── PRINT-ONLY STYLESHEET ── */}
       <style jsx global>{`
         @media print {
           body * {
             visibility: hidden;
           }
-          #monakom-thermal-receipt,
-          #monakom-thermal-receipt * {
+          #daily-drip-thermal-receipt,
+          #daily-drip-thermal-receipt * {
             visibility: visible;
           }
-          #monakom-thermal-receipt {
+          #daily-drip-thermal-receipt {
             position: absolute;
             left: 0;
             top: 0;
