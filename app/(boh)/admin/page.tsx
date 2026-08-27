@@ -407,10 +407,10 @@ export default function CafeDashboard() {
         />
       </div>
 
-      {/* ── ROW 1: Equal-Height Grid (~430px) - Hourly Velocity Chart (2/3) + Top Drinks Ranking (1/3) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch lg:h-[440px]">
+      {/* ── ROW 1: Equal-Height Grid (~470px) - Hourly Velocity Chart (2/3) + Top Drinks Ranking (1/3) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch lg:h-[470px]">
         {/* 1. Interactive Hourly / 7-Day Velocity Chart (2 Columns, Full Vertical Fill) */}
-        <div className="lg:col-span-2 h-full">
+        <div className="lg:col-span-2 h-full min-h-0">
           <HourlySalesChart
             data={analytics.hourlyData}
             dailyData={analytics.dailyData}
@@ -421,8 +421,8 @@ export default function CafeDashboard() {
           />
         </div>
 
-        {/* 2. Top Drinks Leaderboard with Internal Scrolling (1 Column, max-h-[440px]) */}
-        <div className="h-full max-h-[440px]">
+        {/* 2. Top Drinks Leaderboard with Internal Scrolling (1 Column) */}
+        <div className="h-full min-h-0">
           <TopDrinksRanking
             products={analytics.topProducts}
             isLight={isLight}

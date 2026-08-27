@@ -89,13 +89,13 @@ export default function HourlySalesChart({
   const totalRevenueUSD = useMemo(() => activeDataset.reduce((s, d) => s + d.revenueUSD, 0), [activeDataset]);
   const totalOrders = useMemo(() => activeDataset.reduce((s, d) => s + d.orders, 0), [activeDataset]);
 
-  // Generate SVG path for Line / Area Wave View (height: 240)
+  // Generate SVG path for Line / Area Wave View (height: 200)
   const wavePath = useMemo(() => {
     if (activeDataset.length === 0) return { area: "", line: "", points: [] };
     const width = 800;
-    const height = 240;
+    const height = 200;
     const paddingX = 25;
-    const paddingY = 30;
+    const paddingY = 25;
     const chartW = width - paddingX * 2;
     const chartH = height - paddingY * 2;
 
@@ -131,12 +131,12 @@ export default function HourlySalesChart({
   return (
     <div
       onMouseLeave={() => setHoveredIndex(null)}
-      className={`rounded-3xl border p-5 transition-all relative overflow-hidden flex flex-col justify-between h-full max-w-full ${
+      className={`rounded-3xl border p-5 transition-all relative flex flex-col justify-between h-full min-h-0 max-w-full ${
         isLight ? "bg-white border-slate-200 shadow-sm" : "bg-slate-900 border-slate-800"
       }`}
     >
       {/* ── Fixed Header Controls ── */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
         <div>
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
@@ -266,18 +266,18 @@ export default function HourlySalesChart({
         )}
       </div>
 
-      {/* ── Chart Canvas (Takes up full available height: flex-1 min-h-[280px] w-full flex flex-col justify-end) ── */}
+      {/* ── Chart Canvas (Flexes naturally without overflowing or clipping) ── */}
       <div
-        className="flex-1 min-h-[280px] w-full flex flex-col justify-end"
+        className="flex-1 min-h-0 w-full flex flex-col justify-end py-1"
         onMouseLeave={() => setHoveredIndex(null)}
       >
         {chartStyle === "bar" ? (
           /* ── 1. Column Bars View with Scaled Fill ── */
-          <div className="flex items-end gap-1 sm:gap-2 h-full min-h-[270px] w-full pt-6 pb-1">
+          <div className="flex items-end gap-1 sm:gap-2 h-52 sm:h-56 w-full pt-4 pb-1">
             {activeDataset.map((bucket, idx) => {
               const val = getValue(bucket);
-              // Scale bar heights proportionally so peak bar reaches near top (up to 92%)
-              const heightPct = Math.max(8, Math.round((val / Math.max(maxValue, 1)) * 92));
+              // Scale bar heights proportionally up to 88% so peak bar stays within view with amount label
+              const heightPct = Math.max(8, Math.round((val / Math.max(maxValue, 1)) * 88));
               const isPeak = bucket.label === peakBucket.label;
               const isHovered = hoveredIndex === idx;
               const isSelected = selectedBarIndex === idx;
@@ -299,9 +299,9 @@ export default function HourlySalesChart({
                     </div>
                   )}
 
-                  {/* Legible Amount Label above each bar: text-xs font-semibold text-slate-700 dark:text-slate-200 */}
+                  {/* Legible Amount Label */}
                   <span
-                    className={`text-xs font-semibold mb-1.5 transition-all truncate max-w-full ${
+                    className={`text-xs font-semibold mb-1 transition-all truncate max-w-full ${
                       isSelected || isHovered || isPeak
                         ? "text-amber-700 dark:text-amber-300 font-extrabold scale-110"
                         : isLight
@@ -332,7 +332,7 @@ export default function HourlySalesChart({
 
                   {/* X-Axis Day / Hour Label */}
                   <span
-                    className={`text-[10px] mt-2 font-bold transition-colors truncate max-w-full ${
+                    className={`text-[10px] mt-1.5 font-bold transition-colors truncate max-w-full ${
                       isSelected
                         ? "text-amber-600 dark:text-amber-400 font-black underline underline-offset-2"
                         : isPeak
@@ -354,8 +354,8 @@ export default function HourlySalesChart({
           </div>
         ) : (
           /* ── 2. Smooth Bézier Line Wave View with Full Height ── */
-          <div className="w-full h-full min-h-[270px] pt-4 pb-1 flex flex-col justify-between">
-            <svg viewBox="0 0 800 240" className="w-full h-full overflow-visible">
+          <div className="w-full h-52 sm:h-56 pt-2 pb-1 flex flex-col justify-between">
+            <svg viewBox="0 0 800 200" className="w-full h-full overflow-visible">
               <defs>
                 <linearGradient id="lineAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
@@ -370,9 +370,9 @@ export default function HourlySalesChart({
               </defs>
 
               {/* Grid Lines */}
-              <line x1="25" y1="30" x2="775" y2="30" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
-              <line x1="25" y1="110" x2="775" y2="110" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
-              <line x1="25" y1="190" x2="775" y2="190" stroke={isLight ? "#CBD5E1" : "#475569"} />
+              <line x1="25" y1="25" x2="775" y2="25" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
+              <line x1="25" y1="95" x2="775" y2="95" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
+              <line x1="25" y1="165" x2="775" y2="165" stroke={isLight ? "#CBD5E1" : "#475569"} />
 
               {/* Gradient Filled Area */}
               <path d={wavePath.area} fill="url(#lineAreaGradient)" />
@@ -434,7 +434,7 @@ export default function HourlySalesChart({
 
       {/* ── Fixed Footer Scale Indicators ── */}
       <div
-        className={`shrink-0 flex items-center justify-between text-[9.5px] font-semibold pt-2.5 border-t mt-2 ${
+        className={`shrink-0 flex items-center justify-between text-[9.5px] font-semibold pt-2 border-t mt-1.5 ${
           isLight ? "border-slate-100 text-slate-500" : "border-slate-800 text-slate-400"
         }`}
       >
