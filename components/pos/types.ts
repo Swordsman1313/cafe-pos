@@ -18,9 +18,10 @@ export interface CartItem {
 }
 
 export interface ShiftState {
-  isOpen: boolean;
+  isOpen?: boolean;
   cashierName: string;
-  startedAt: string;
+  startedAt?: string;
+  openedAt?: string;
   businessDate: string;
   shiftNumber: number;
   floatUSD: number;
@@ -28,7 +29,8 @@ export interface ShiftState {
   totalCashSalesUSD: number;
   totalQRSalesUSD: number;
   orderCount: number;
-  ordersCompleted: CompletedOrderRecord[];
+  ordersCompleted?: CompletedOrderRecord[];
+  isUnclosed?: boolean;
 }
 
 export interface CompletedOrderRecord {

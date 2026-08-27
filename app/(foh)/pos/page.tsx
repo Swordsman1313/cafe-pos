@@ -55,6 +55,9 @@ import {
 import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
 import { TouchNumpadDialog } from "@/components/pos/TouchNumpadDialog";
+import { ReceiptModal } from "@/components/pos/ReceiptModal";
+import { EndShiftModal } from "@/components/pos/EndShiftModal";
+import { EndDayModal } from "@/components/pos/EndDayModal";
 
 /* ------------------------------------------------------------------ */
 /*  Types & Interfaces                                                */
@@ -601,6 +604,8 @@ export default function PosRegisterPage() {
   const [couponCode, setCouponCode] = useState<string>("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
+  const [showEndShiftModal, setShowEndShiftModal] = useState<boolean>(false);
+  const [showEndDayModal, setShowEndDayModal] = useState<boolean>(false);
   const [showOperationsModal, setShowOperationsModal] = useState<boolean>(false);
   const [showCashierModal, setShowCashierModal] = useState<boolean>(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<CompletedOrderRecord | null>(null);
@@ -1032,14 +1037,16 @@ export default function PosRegisterPage() {
     showNotification("Reordered Successfully 🔄", `${reloadedItems.length} items loaded into cart.`, "success", 2000);
   };
 
-  // Silent Thermal Print (EPSON / POS Thermal Printer direct payload)
+  // Silent Thermal Print (EPSON / POS Thermal Printer direct payload & preview)
   const handleSilentThermalPrint = (order: CompletedOrderRecord) => {
     soundFX.playKitchen();
+    setLastCompletedSale(order);
+    setShowReceiptModal(true);
     showNotification(
-      "Thermal Print Sent 🖨️",
-      `Direct thermal payload dispatched to EPSON TM-T88VI (Ticket #${order.ticketNumber})`,
+      "Commercial Invoice Ready 🖨️",
+      `Viewing & Printing Ticket #${order.ticketNumber}`,
       "success",
-      2500
+      2000
     );
   };
 
@@ -1102,8 +1109,19 @@ export default function PosRegisterPage() {
           )}
         </div>
 
-        {/* Right: Hardware Status, Online Indicator & Operations */}
+        {/* Right: Shift Status, Hardware Status, Online Indicator & Operations */}
         <div className="flex items-center gap-2">
+          {/* Shift Status Pill */}
+          <button
+            type="button"
+            onClick={() => setShowEndShiftModal(true)}
+            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 transition-all cursor-pointer shadow-2xs"
+            title="Click to view Shift Details & Drawer Cash Count"
+          >
+            <Clock size={12} className="text-amber-700" />
+            <span>Shift #{shift.shiftNumber || 1} · {shift.cashierName}</span>
+          </button>
+
           {/* Hardware Awareness Pill */}
           <button
             type="button"
@@ -3169,265 +3187,76 @@ export default function PosRegisterPage() {
         </div>
       )}
 
-      {/* 6. Completed Sale Receipt Modal */}
+      {/* 6. Completed Sale Receipt Modal (Monakom Cambodian Commercial Invoice) */}
       {showReceiptModal && lastCompletedSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center max-h-[90vh] overflow-y-auto">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
-              <CheckCircle2 size={28} />
-            </div>
-
-            <div>
-              <h2 className="text-base font-black text-stone-900">Order #{lastCompletedSale.ticketNumber} Done!</h2>
-              <p className="text-xs text-stone-400">{lastCompletedSale.timestamp} · {lastCompletedSale.paymentMethod}</p>
-            </div>
-
-            {/* Total Paid Row */}
-            <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between text-xs">
-              <span className="font-bold text-stone-500">Total Paid:</span>
-              <span className="font-black text-stone-900 text-sm">
-                {formatUSD(lastCompletedSale.total)} ({formatKHRDirect(roundKHR(lastCompletedSale.total * KHR_RATE))})
-              </span>
-            </div>
-
-            {/* Change Calculator Section if Change > 0 */}
-            {lastCompletedSale.paymentMethod === "CASH" && lastCompletedSale.changeUSD > 0 && (() => {
-              const totalChangeUSD = lastCompletedSale.changeUSD;
-              const maxUSD = Math.floor(totalChangeUSD);
-              const parsedUSDInput = parseInt(receiptUSDInput);
-              const givenUSD = isNaN(parsedUSDInput)
-                ? (receiptChangeMode === "SPLIT_USD_KHR" ? maxUSD : 0)
-                : Math.min(maxUSD, Math.max(0, parsedUSDInput));
-              const remainingUSD = Math.max(0, totalChangeUSD - givenUSD);
-              const remainingKHR = roundKHR(remainingUSD * KHR_RATE);
-
-              return (
-                <div className="space-y-3">
-                  {/* Segmented Pill Toggle: [ All in Riel ] | [ Dollar + Riel ] */}
-                  <div className="grid grid-cols-2 p-1 bg-stone-100 rounded-2xl gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        soundFX.playBlip(900);
-                        setReceiptChangeMode("ALL_KHR");
-                        setReceiptUSDInput("0");
-                      }}
-                      className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                        receiptChangeMode === "ALL_KHR"
-                          ? "bg-white text-stone-900 shadow-2xs"
-                          : "text-stone-500 hover:text-stone-900"
-                      }`}
-                    >
-                      All in Riel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        soundFX.playBlip(900);
-                        setReceiptChangeMode("SPLIT_USD_KHR");
-                        if (!receiptUSDInput || receiptUSDInput === "0") {
-                          setReceiptUSDInput(String(maxUSD));
-                        }
-                      }}
-                      className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                        receiptChangeMode === "SPLIT_USD_KHR"
-                          ? "bg-white text-stone-900 shadow-2xs"
-                          : "text-stone-500 hover:text-stone-900"
-                      }`}
-                    >
-                      Dollar + Riel
-                    </button>
-                  </div>
-
-                  {/* Mode 1: All in Riel Display */}
-                  {receiptChangeMode === "ALL_KHR" ? (
-                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
-                      <span className="text-[11px] font-black text-emerald-900 uppercase tracking-wider block">
-                        Change Due (All in Riel)
-                      </span>
-                      <span className="text-3xl font-black text-emerald-700 block tracking-tight">
-                        {formatKHRDirect(lastCompletedSale.changeKHR)}
-                      </span>
-                      <span className="text-xs font-semibold text-stone-500 block">
-                        ≈ {formatUSD(lastCompletedSale.changeUSD)}
-                      </span>
-                    </div>
-                  ) : (
-                    /* Mode 2: Dynamic Split Dollar + Riel Mode */
-                    <div className="space-y-3">
-                      {/* Breakdown Box */}
-                      <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
-                        <div className="p-2.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                            Give in USD
-                          </span>
-                          <span className="text-2xl font-black text-emerald-900 block mt-0.5">
-                            ${givenUSD}.00
-                          </span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-white border border-emerald-100 shadow-2xs">
-                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                            Give in KHR
-                          </span>
-                          <span className="text-2xl font-black text-emerald-700 block mt-0.5">
-                            {formatKHRDirect(remainingKHR)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Direct Numeric Input & Steppers */}
-                      {maxUSD > 0 && (
-                        <div className="space-y-1.5 text-left">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-stone-600">Enter USD Bills to Give:</span>
-                            <span className="text-[10px] font-bold text-stone-400">Max: ${maxUSD}.00</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
-                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-stone-400 text-lg">$</span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={maxUSD}
-                                value={receiptUSDInput}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val === "" || parseInt(val) <= maxUSD) {
-                                    setReceiptUSDInput(val);
-                                  }
-                                }}
-                                placeholder="0"
-                                className="w-full h-11 pl-8 pr-3 rounded-xl border border-stone-300 text-center text-lg font-bold text-stone-900 focus:border-emerald-500 focus:outline-none bg-white shadow-2xs"
-                              />
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                soundFX.playBlip(750);
-                                const current = parseInt(receiptUSDInput) || 0;
-                                setReceiptUSDInput(String(Math.max(0, current - 1)));
-                              }}
-                              className="h-11 w-11 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-lg font-black flex items-center justify-center transition-colors cursor-pointer"
-                            >
-                              −
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                soundFX.playBlip(880);
-                                const current = parseInt(receiptUSDInput) || 0;
-                                setReceiptUSDInput(String(Math.min(maxUSD, current + 1)));
-                              }}
-                              className="h-11 w-11 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-lg font-black flex items-center justify-center transition-colors cursor-pointer"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {/* Quick Pill Buttons */}
-                          <div className="flex flex-wrap gap-1 pt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                soundFX.playBlip(880);
-                                setReceiptUSDInput("0");
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                                givenUSD === 0
-                                  ? "bg-emerald-700 text-white shadow-xs"
-                                  : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                              }`}
-                            >
-                              $0
-                            </button>
-                            {[1, 2, 5, 10, 20, 50, 100]
-                              .filter((d) => d <= maxUSD)
-                              .map((d) => (
-                                <button
-                                  key={d}
-                                  type="button"
-                                  onClick={() => {
-                                    soundFX.playBlip(900);
-                                    setReceiptUSDInput(String(d));
-                                  }}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                                    givenUSD === d
-                                      ? "bg-emerald-700 text-white shadow-xs"
-                                      : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                                  }`}
-                                >
-                                  ${d}
-                                </button>
-                              ))}
-                            {maxUSD > 1 && ![1, 2, 5, 10, 20, 50, 100].includes(maxUSD) && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  soundFX.playBlip(900);
-                                  setReceiptUSDInput(String(maxUSD));
-                                }}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                                  givenUSD === maxUSD
-                                    ? "bg-emerald-700 text-white shadow-xs"
-                                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                                }`}
-                              >
-                                ${maxUSD} (Max)
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Items Receipt Summary */}
-            <div className="p-3 rounded-2xl bg-stone-50 border border-stone-200 text-left space-y-1 text-xs">
-              <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider block mb-1">
-                Order Items ({lastCompletedSale.items.length})
-              </span>
-              <div className="text-[11px] text-stone-600 space-y-0.5 max-h-32 overflow-y-auto pr-1">
-                {lastCompletedSale.items.map((it, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span className="truncate pr-2">{it.qty}x {it.name}</span>
-                    <span className="font-semibold text-stone-900 shrink-0">{formatUSD(it.total)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    window.print();
-                  } catch {}
-                }}
-                className="flex-1 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Printer size={14} /> Print Slip
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowReceiptModal(false)}
-                className="flex-1 py-3 rounded-2xl text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer"
-                style={{ background: "#4A2E1F" }}
-              >
-                New Order →
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReceiptModal
+          order={lastCompletedSale}
+          onNewOrder={() => setShowReceiptModal(false)}
+          onClose={() => setShowReceiptModal(false)}
+        />
       )}
 
-      {/* 7. Operations & System Settings Modal */}
+      {/* 7. End Shift Z-Report Modal */}
+      {showEndShiftModal && (
+        <EndShiftModal
+          isOpen={showEndShiftModal}
+          shift={shift}
+          heldOrders={singleHeldOrder ? [singleHeldOrder] : []}
+          onClose={() => setShowEndShiftModal(false)}
+          onHandoverShift={(reconciled) => {
+            soundFX.playSuccess();
+            setShift((prev) => ({
+              ...prev,
+              shiftNumber: (prev.shiftNumber || 1) + 1,
+              totalCashSalesUSD: 0,
+              totalQRSalesUSD: 0,
+              orderCount: 0,
+              openedAt: new Date().toISOString(),
+            }));
+            setShowEndShiftModal(false);
+            showNotification("Shift Handover Complete", `Shift #${(shift.shiftNumber || 1) + 1} started.`, "success");
+          }}
+          onToast={(t) => showNotification(t.method, t.amount, "success")}
+        />
+      )}
+
+      {/* 8. End Business Day (Daily Z-Close) Modal */}
+      {showEndDayModal && (
+        <EndDayModal
+          isOpen={showEndDayModal}
+          shift={shift}
+          businessDate={shift.businessDate}
+          heldOrders={singleHeldOrder ? [singleHeldOrder] : []}
+          completedOrdersCount={completedOrders.length}
+          totalDailyGrossUSD={completedOrders.reduce((s, o) => s + (o.status !== "Void" ? o.total : 0), 0)}
+          totalDailyCashUSD={completedOrders.reduce((s, o) => s + (o.paymentMethod === "CASH" && o.status !== "Void" ? o.total : 0), 0)}
+          totalDailyQRUSD={completedOrders.reduce((s, o) => s + (o.paymentMethod === "BAKONG KHQR" && o.status !== "Void" ? o.total : 0), 0)}
+          totalDailyCardUSD={completedOrders.reduce((s, o) => s + (o.paymentMethod === "CREDIT CARD" && o.status !== "Void" ? o.total : 0), 0)}
+          totalDailyTaxUSD={completedOrders.reduce((s, o) => s + (o.status !== "Void" ? o.tax : 0), 0)}
+          totalDailyVoidsCount={completedOrders.filter((o) => o.status === "Void").length}
+          totalDailyVoidsAmountUSD={completedOrders.filter((o) => o.status === "Void").reduce((s, o) => s + o.total, 0)}
+          onClose={() => setShowEndDayModal(false)}
+          onConfirmEndDay={() => {
+            soundFX.playSuccess();
+            const nextDate = new Date();
+            nextDate.setDate(nextDate.getDate() + 1);
+            const nextDateStr = nextDate.toISOString().slice(0, 10);
+            setShift((prev) => ({
+              ...prev,
+              shiftNumber: 1,
+              businessDate: nextDateStr,
+              totalCashSalesUSD: 0,
+              totalQRSalesUSD: 0,
+              orderCount: 0,
+              openedAt: new Date().toISOString(),
+            }));
+            setShowEndDayModal(false);
+            showNotification("Day Closed", `Business date rolled to ${nextDateStr}. Morning Shift #1 ready.`, "success");
+          }}
+        />
+      )}
+
+      {/* 9. Operations & System Settings Modal */}
       {showOperationsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
@@ -3435,7 +3264,7 @@ export default function PosRegisterPage() {
               <span className="text-xs font-black text-stone-900 flex items-center gap-2">
                 <Settings size={16} className="text-stone-700" /> POS Operations &amp; Shift
               </span>
-              <button type="button" onClick={() => setShowOperationsModal(false)} className="text-stone-400 hover:text-stone-700 text-xs font-bold">
+              <button type="button" onClick={() => setShowOperationsModal(false)} className="text-stone-400 hover:text-stone-700 text-xs font-bold cursor-pointer">
                 ✕
               </button>
             </div>
@@ -3455,20 +3284,59 @@ export default function PosRegisterPage() {
                 <ArrowRight size={14} className="text-stone-400" />
               </Link>
 
+              {/* End Shift / Handover Trigger */}
               <button
                 type="button"
                 onClick={() => {
-                  soundFX.playWarning();
-                  showNotification("Shift Closed", "Z-Report generated and synced to BOH.", "success");
                   setShowOperationsModal(false);
+                  setShowEndShiftModal(true);
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 text-left transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-950 text-left transition-colors cursor-pointer"
               >
                 <div>
-                  <span className="font-black block">Close Shift / End Business Day</span>
-                  <span className="text-[10px] text-rose-600">Print Z-Report &amp; count drawer float</span>
+                  <span className="font-black block">End Shift / Shift Handover</span>
+                  <span className="text-[10px] text-amber-800">Print Shift Z-Report &amp; count drawer cash</span>
                 </div>
-                <span className="text-[10px] font-black bg-rose-200 text-rose-900 px-2 py-0.5 rounded">Z-Report</span>
+                <span className="text-[10px] font-black bg-amber-200 text-amber-950 px-2 py-0.5 rounded">Shift #{shift.shiftNumber || 1}</span>
+              </button>
+
+              {/* End Business Day Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOperationsModal(false);
+                  setShowEndDayModal(true);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-950 text-left transition-colors cursor-pointer"
+              >
+                <div>
+                  <span className="font-black block">End Business Day (Daily Z-Close)</span>
+                  <span className="text-[10px] text-rose-700">Reconcile all shifts &amp; roll date</span>
+                </div>
+                <span className="text-[10px] font-black bg-rose-200 text-rose-900 px-2 py-0.5 rounded">Daily Z-Close</span>
+              </button>
+
+              {/* Reprint Last Commercial Invoice Receipt */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (completedOrders.length > 0) {
+                    setLastCompletedSale(completedOrders[0]);
+                    setShowOperationsModal(false);
+                    setShowReceiptModal(true);
+                  } else {
+                    showNotification("No Previous Orders", "Complete an order first to reprint receipt.", "info");
+                  }
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-left transition-colors cursor-pointer"
+              >
+                <div>
+                  <span className="font-black block">Reprint Last Commercial Invoice</span>
+                  <span className="text-[10px] text-stone-400">
+                    {completedOrders.length > 0 ? `Ticket #${completedOrders[0].ticketNumber}` : "No recent orders"}
+                  </span>
+                </div>
+                <Printer size={14} className="text-stone-600" />
               </button>
 
               <button
@@ -3489,14 +3357,14 @@ export default function PosRegisterPage() {
               <button
                 type="button"
                 onClick={() => {
-                  soundFX.playSuccess();
-                  showNotification("Printer Ready", "Thermal printer calibrated.", "success");
+                  setShowOperationsModal(false);
+                  setShowHardwareModal(true);
                 }}
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-left transition-colors cursor-pointer"
               >
                 <div>
-                  <span className="font-black block">Printer Calibration</span>
-                  <span className="text-[10px] text-stone-400">80mm ESC/POS Network Printer</span>
+                  <span className="font-black block">Hardware &amp; Printer Diagnostics</span>
+                  <span className="text-[10px] text-stone-400">80mm ESC/POS Station Status</span>
                 </div>
                 <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Ready</span>
               </button>
@@ -3505,7 +3373,7 @@ export default function PosRegisterPage() {
             <button
               type="button"
               onClick={() => setShowOperationsModal(false)}
-              className="w-full py-2.5 rounded-2xl bg-stone-900 text-white font-black text-xs hover:bg-stone-800 transition-colors"
+              className="w-full py-2.5 rounded-2xl bg-stone-900 text-white font-black text-xs hover:bg-stone-800 transition-colors cursor-pointer"
             >
               Done
             </button>
