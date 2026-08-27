@@ -25,15 +25,19 @@ import {
   ShieldCheck,
   CheckCircle2,
   Calendar,
+  Zap,
 } from "lucide-react";
 import HourlySalesChart from "@/components/boh/HourlySalesChart";
+import HourlyBreakdownDrawer from "@/components/boh/HourlyBreakdownDrawer";
 import TopDrinksRanking from "@/components/boh/TopDrinksRanking";
 import StockDepletionCard from "@/components/boh/StockDepletionCard";
+import StaffUtilizationCard from "@/components/boh/StaffUtilizationCard";
 import DateRangePicker, { DateRangeState } from "@/components/boh/DateRangePicker";
 import CustomReportModal from "@/components/boh/CustomReportModal";
 import {
   aggregatePOSAnalytics,
   AnalyticsSummary,
+  HourlyBucket,
   RawPOSOrder,
   KHR_EXCHANGE_RATE,
 } from "@/lib/analytics-aggregator";
@@ -100,6 +104,9 @@ export default function CafeDashboard() {
     endDate: todayStr,
     label: "Today",
   });
+
+  // State: Active Slide-Over Hour Breakdown
+  const [selectedHourlyBucket, setSelectedHourlyBucket] = useState<HourlyBucket | null>(null);
 
   // State: POS Orders & Aggregated Analytics
   const [posOrders, setPosOrders] = useState<RawPOSOrder[]>([]);
@@ -181,7 +188,9 @@ export default function CafeDashboard() {
       { header: "Revenue (USD)", key: "revenueUSD", format: (v) => `$${Number(v).toFixed(2)}` },
       { header: "Revenue (KHR)", key: "revenueKHR", format: (v) => `${Number(v).toLocaleString()} ៛` },
       { header: "Order Tickets", key: "orders" },
+      { header: "Rate (Ord/Hr)", key: "orderRatePerHour" },
       { header: "Avg Ticket (USD)", key: "avgTicketUSD", format: (v) => `$${Number(v).toFixed(2)}` },
+      { header: "Avg Speed (sec)", key: "avgTransactionSpeedSec", format: (v) => `${v}s` },
       { header: "% of Daily Total", key: "pctOfDaily", format: (v) => `${v}%` },
       { header: "Peak Hour Flag", key: "isPeak", format: (v) => (v ? "🔥 PEAK RUSH" : "—") },
     ];
@@ -197,7 +206,7 @@ export default function CafeDashboard() {
       { header: "Share of Menu Mix (%)", key: "shareOfTotalPct", format: (v) => `${v}%` },
     ];
 
-    // Sheet 3: Ingredient Depletion
+    // Sheet 3: Ingredient Depletion & Restock
     const ingredientColumns: ReportColumn[] = [
       { header: "Ingredient", key: "name" },
       { header: "Category", key: "category" },
@@ -205,6 +214,8 @@ export default function CafeDashboard() {
       { header: "Daily Capacity", key: "capacity" },
       { header: "Unit", key: "unit" },
       { header: "Depletion Rate (%)", key: "depletionPct", format: (v) => `${v}%` },
+      { header: "Hours Until Empty", key: "hoursUntilDepletion", format: (v) => `${v} hrs` },
+      { header: "Supplier", key: "supplierName" },
       { header: "Threshold Status", key: "statusLabel" },
     ];
 
@@ -218,7 +229,9 @@ export default function CafeDashboard() {
           revenueUSD: `$${analytics.totalRevenueUSD.toFixed(2)}`,
           revenueKHR: `${analytics.totalRevenueKHR.toLocaleString()} ៛`,
           orders: analytics.totalOrders,
+          orderRatePerHour: "—",
           avgTicketUSD: `$${analytics.avgTicketUSD.toFixed(2)}`,
+          avgTransactionSpeedSec: "—",
           pctOfDaily: "100%",
           isPeak: `Peak at ${analytics.peakHourLabel}`,
         },
@@ -236,7 +249,7 @@ export default function CafeDashboard() {
         },
       },
       {
-        sheetName: "Ingredient Burn & Stock",
+        sheetName: "Ingredient Burn & Restock",
         columns: ingredientColumns,
         data: analytics.ingredients,
       },
@@ -284,48 +297,59 @@ export default function CafeDashboard() {
   return (
     <div className={`p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full page-enter ${isLight ? "text-slate-900" : "text-white"}`}>
       
-      {/* ── Header Strip: Brand, Date Range Picker & Custom Export ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 border-slate-200/60 dark:border-slate-800">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md shadow-amber-500/20">
-              ☕
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
-                The Daily Drip Intelligence
-              </h1>
-              <p className={`text-xs mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                Live sales velocity, ingredient burn &amp; financial performance for <strong>{analytics.dateRangeLabel}</strong>
-              </p>
+      {/* ── STICKY TOP BAR: Date Range Picker, Real-time Sync & Export Triggers ── */}
+      <div
+        className={`sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3.5 backdrop-blur-md border-b transition-all ${
+          isLight
+            ? "bg-white/90 border-slate-200/80 shadow-xs"
+            : "bg-slate-950/85 border-slate-800/80 shadow-md"
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 max-w-7xl mx-auto">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md shadow-amber-500/20">
+                ☕
+              </div>
+              <div>
+                <h1 className="text-base sm:text-lg font-extrabold tracking-tight flex items-center gap-2">
+                  The Daily Drip Intelligence
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                    ● Live Sync
+                  </span>
+                </h1>
+                <p className={`text-[11px] ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+                  Active Window: <strong className="text-amber-500">{analytics.dateRangeLabel}</strong> · Branch #01 Toul Kork
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Interactive Controls: Date Range Picker + Export Triggers */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <DateRangePicker
-            dateRange={dateRange}
-            onChange={(newRange) => setDateRange(newRange)}
-            onExportXLS={handleExportActiveXLS}
-            onExportPDF={handleExportActivePDF}
-            isLight={isLight}
-          />
+          {/* Interactive Controls: Date Range Picker + Export Triggers */}
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangePicker
+              dateRange={dateRange}
+              onChange={(newRange) => setDateRange(newRange)}
+              onExportXLS={handleExportActiveXLS}
+              onExportPDF={handleExportActivePDF}
+              isLight={isLight}
+            />
 
-          <button
-            type="button"
-            onClick={syncDashboardData}
-            disabled={loading || isPending}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer shadow-2xs ${
-              isLight
-                ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                : "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
-            }`}
-            title="Refresh analytics and sync with live POS orders"
-          >
-            <RefreshCw size={13} className={loading || isPending ? "animate-spin text-amber-400" : ""} />
-            <span>Sync</span>
-          </button>
+            <button
+              type="button"
+              onClick={syncDashboardData}
+              disabled={loading || isPending}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer shadow-2xs ${
+                isLight
+                  ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  : "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
+              }`}
+              title="Refresh analytics and sync with live POS orders"
+            >
+              <RefreshCw size={13} className={loading || isPending ? "animate-spin text-amber-400" : ""} />
+              <span className="hidden sm:inline">Sync</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -368,7 +392,7 @@ export default function CafeDashboard() {
         />
       </div>
 
-      {/* ── Main Data Visualizations Row ── */}
+      {/* ── Main Interactive Data Visualizations Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* 1. Interactive Hourly Sales & Velocity Chart (2 Columns) */}
         <div className="lg:col-span-2">
@@ -376,6 +400,7 @@ export default function CafeDashboard() {
             data={analytics.hourlyData}
             isLight={isLight}
             khrRate={KHR_EXCHANGE_RATE}
+            onSelectHour={(bucket) => setSelectedHourlyBucket(bucket)}
           />
         </div>
 
@@ -389,105 +414,32 @@ export default function CafeDashboard() {
       </div>
 
       {/* ── Bottom Operational Insights Grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* 3. Ingredient Usage & Stock Depletion Card with <60%, 60-85%, >85% Thresholds */}
-        <div className="md:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* 3. Actionable Ingredient Usage & Stock Depletion Card (2 Columns) */}
+        <div className="lg:col-span-2">
           <StockDepletionCard
             ingredients={analytics.ingredients}
             isLight={isLight}
           />
         </div>
 
-        {/* 4. Payment Tender & Shift Team Summary */}
-        <div
-          className={`rounded-3xl border p-5 transition-all flex flex-col justify-between ${
-            isLight ? "bg-white border-slate-200 shadow-sm" : "bg-slate-900 border-slate-800"
-          }`}
-        >
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-extrabold flex items-center gap-2">
-                <Users size={16} className="text-blue-400" />
-                Payment Mix &amp; Team
-              </h2>
-              <span className="text-[10px] font-bold text-slate-400">
-                Live Tender
-              </span>
-            </div>
-
-            {/* Payment Mix Rows */}
-            <div className="space-y-2 mb-4">
-              <div className={`p-2.5 rounded-2xl border flex items-center justify-between text-xs ${
-                isLight ? "bg-slate-50 border-slate-100" : "bg-slate-800/50 border-slate-700/50"
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  <span className="font-bold">Bakong KHQR (Digital)</span>
-                </div>
-                <span className="font-extrabold text-emerald-400">
-                  ${(analytics.totalRevenueUSD * 0.58).toFixed(2)} (58%)
-                </span>
-              </div>
-
-              <div className={`p-2.5 rounded-2xl border flex items-center justify-between text-xs ${
-                isLight ? "bg-slate-50 border-slate-100" : "bg-slate-800/50 border-slate-700/50"
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-amber-400" />
-                  <span className="font-bold">Cash Tender (USD/KHR)</span>
-                </div>
-                <span className="font-extrabold text-amber-400">
-                  ${(analytics.totalRevenueUSD * 0.34).toFixed(2)} (34%)
-                </span>
-              </div>
-
-              <div className={`p-2.5 rounded-2xl border flex items-center justify-between text-xs ${
-                isLight ? "bg-slate-50 border-slate-100" : "bg-slate-800/50 border-slate-700/50"
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-blue-400" />
-                  <span className="font-bold">Cards &amp; Other</span>
-                </div>
-                <span className="font-extrabold text-blue-400">
-                  ${(analytics.totalRevenueUSD * 0.08).toFixed(2)} (8%)
-                </span>
-              </div>
-            </div>
-
-            {/* Active Staff List */}
-            <div className="space-y-2 border-t pt-3 border-slate-200/60 dark:border-slate-800">
-              <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block mb-1">
-                Active Shifts on Duty
-              </span>
-              {[
-                { name: "Dara", role: "Cashier", shift: "Shift #1 (Morning)", status: "Active" },
-                { name: "Sophea", role: "Lead Barista", shift: "Shift #1 (Morning)", status: "Active" },
-                { name: "Channary", role: "Supervisor", shift: "General Floor", status: "Active" },
-              ].map((staff) => (
-                <div key={staff.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[10px]">
-                      {staff.name[0]}
-                    </span>
-                    <div>
-                      <span className="font-bold block leading-tight">{staff.name}</span>
-                      <span className={`text-[9.5px] ${isLight ? "text-slate-400" : "text-slate-500"}`}>{staff.role}</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" /> {staff.shift}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-3 border-t mt-3 text-[10px] text-slate-500 flex justify-between">
-            <span>Branch #01 Toul Kork 592</span>
-            <span className="text-emerald-400 font-bold">● System Synced</span>
-          </div>
+        {/* 4. Operational Staff Utilization & Shift Synchronization (1 Column) */}
+        <div>
+          <StaffUtilizationCard
+            staff={analytics.staff}
+            isLight={isLight}
+          />
         </div>
       </div>
+
+      {/* ── Slide-Over Granular Hourly Breakdown Drawer ── */}
+      {selectedHourlyBucket && (
+        <HourlyBreakdownDrawer
+          bucket={selectedHourlyBucket}
+          onClose={() => setSelectedHourlyBucket(null)}
+          isLight={isLight}
+        />
+      )}
 
       {/* Custom Report Modal */}
       <CustomReportModal
