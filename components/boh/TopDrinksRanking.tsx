@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { Star, Coffee, Trophy, TrendingUp, Sparkles, Award } from "lucide-react";
 import { RankedProduct } from "@/lib/analytics-aggregator";
 
@@ -23,12 +23,25 @@ export default function TopDrinksRanking({
       ? products
       : products.filter((p) => p.category === selectedCategory);
 
-  // Reset scroll to top whenever category filter changes so Rank #1 is always visible
+  // Reset scroll to top on initial load and whenever category filter changes
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = 0;
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, products]);
+
+  useLayoutEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  }, []);
+
+  const handleCategorySelect = (cat: string) => {
+    setSelectedCategory(cat);
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  };
 
   const totalVolume = products.reduce((s, p) => s + p.quantity, 0);
   const medals = ["🥇", "🥈", "🥉"];
@@ -61,14 +74,14 @@ export default function TopDrinksRanking({
           </span>
         </div>
 
-        {/* ── Category Pills Filter (Horizontal scrollable with no truncation) ── */}
+        {/* ── Category Pills Filter ── */}
         {categories.length > 2 && (
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none flex-nowrap py-1 mb-1">
             {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => handleCategorySelect(cat)}
                 className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? "bg-amber-500 text-slate-950 font-black shadow-xs"
@@ -132,48 +145,48 @@ export default function TopDrinksRanking({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 font-medium px-2 py-0.5 rounded-md text-[11px]">
-                          {item.quantity} sold · {item.shareOfTotalPct}% mix
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 font-medium px-2 py-0.5 rounded-md text-[11px]">
+                        {item.quantity} sold · {item.shareOfTotalPct}% mix
+                      </span>
                     </div>
                   </div>
-
-                  <div className="text-right shrink-0">
-                    <span className={`font-extrabold text-sm block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
-                      ${item.revenueUSD.toFixed(2)}
-                    </span>
-                    <span className={`font-medium text-[11px] block mt-0.5 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
-                      {item.revenueKHR.toLocaleString()} ៛
-                    </span>
-                  </div>
                 </div>
 
-                {/* Relative Volume Fill Bar */}
-                <div className="space-y-1 max-w-full overflow-hidden">
-                  <div className={`h-1.5 rounded-full overflow-hidden max-w-full ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
-                    <div
-                      style={{ width: `${Math.min(item.relativeVolumePct, 100)}%` }}
-                      className={`h-full rounded-full transition-all duration-700 ${
-                        idx === 0
-                          ? "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 shadow-sm"
-                          : idx === 1
-                          ? "bg-gradient-to-r from-amber-500 to-amber-400"
-                          : "bg-gradient-to-r from-amber-600/80 to-amber-500/70"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center text-[8.5px] text-slate-500 dark:text-slate-400 font-semibold px-0.5">
-                    <span>Relative Demand Volume</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-400">{item.relativeVolumePct}%</span>
-                  </div>
+                <div className="text-right shrink-0">
+                  <span className={`font-extrabold text-sm block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
+                    ${item.revenueUSD.toFixed(2)}
+                  </span>
+                  <span className={`font-medium text-[11px] block mt-0.5 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                    {item.revenueKHR.toLocaleString()} ៛
+                  </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
+
+              {/* Relative Volume Fill Bar */}
+              <div className="space-y-1 max-w-full overflow-hidden">
+                <div className={`h-1.5 rounded-full overflow-hidden max-w-full ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
+                  <div
+                    style={{ width: `${Math.min(item.relativeVolumePct, 100)}%` }}
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      idx === 0
+                        ? "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 shadow-sm"
+                        : idx === 1
+                        ? "bg-gradient-to-r from-amber-500 to-amber-400"
+                        : "bg-gradient-to-r from-amber-600/80 to-amber-500/70"
+                    }`}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[8.5px] text-slate-500 dark:text-slate-400 font-semibold px-0.5">
+                  <span>Relative Demand Volume</span>
+                  <span className="font-bold text-amber-700 dark:text-amber-400">{item.relativeVolumePct}%</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
+    </div>
 
       {/* ── Fixed Footer ── */}
       <div
