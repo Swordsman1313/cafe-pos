@@ -407,10 +407,10 @@ export default function CafeDashboard() {
         />
       </div>
 
-      {/* ── Main Interactive Data Visualizations Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* ── Main Interactive Data Visualizations Row (Equalized Grid Heights lg:h-[480px]) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch lg:h-[480px]">
         {/* 1. Interactive Hourly / 7-Day Velocity Chart (2 Columns) */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-full">
           <HourlySalesChart
             data={analytics.hourlyData}
             dailyData={analytics.dailyData}
@@ -421,8 +421,8 @@ export default function CafeDashboard() {
           />
         </div>
 
-        {/* 2. Top Drinks Leaderboard & Relative Volume Fill (1 Column) */}
-        <div>
+        {/* 2. Top Drinks Leaderboard with Internal Scrolling (1 Column) */}
+        <div className="h-full">
           <TopDrinksRanking
             products={analytics.topProducts}
             isLight={isLight}
@@ -431,9 +431,9 @@ export default function CafeDashboard() {
       </div>
 
       {/* ── Bottom Operational Insights Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         {/* 3. Actionable Ingredient Usage & Stock Depletion Card (2 Columns) */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-full">
           <StockDepletionCard
             ingredients={analytics.ingredients}
             isLight={isLight}
@@ -441,7 +441,7 @@ export default function CafeDashboard() {
         </div>
 
         {/* 4. Operational Staff Utilization & Shift Synchronization (1 Column) */}
-        <div>
+        <div className="h-full">
           <StaffUtilizationCard
             staff={analytics.staff}
             isLight={isLight}

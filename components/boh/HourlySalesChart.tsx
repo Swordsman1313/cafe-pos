@@ -93,9 +93,9 @@ export default function HourlySalesChart({
   const wavePath = useMemo(() => {
     if (activeDataset.length === 0) return { area: "", line: "", points: [] };
     const width = 800;
-    const height = 150;
+    const height = 180;
     const paddingX = 25;
-    const paddingY = 20;
+    const paddingY = 25;
     const chartW = width - paddingX * 2;
     const chartH = height - paddingY * 2;
 
@@ -130,12 +130,12 @@ export default function HourlySalesChart({
   return (
     <div
       onMouseLeave={() => setHoveredIndex(null)}
-      className={`rounded-3xl border p-5 transition-all relative overflow-hidden flex flex-col justify-between max-w-full ${
+      className={`rounded-3xl border p-5 transition-all relative overflow-hidden flex flex-col justify-between h-full max-w-full ${
         isLight ? "bg-white border-slate-200 shadow-sm" : "bg-slate-900 border-slate-800"
       }`}
     >
-      {/* ── Top Header Controls ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      {/* ── Fixed Header Controls ── */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
         <div>
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
@@ -226,9 +226,9 @@ export default function HourlySalesChart({
         </div>
       </div>
 
-      {/* ── Active Hover / Callout (Cleaned up state to prevent ghost tooltips) ── */}
+      {/* ── Active Hover / Callout ── */}
       <div
-        className={`mb-3 px-3 py-2 rounded-2xl border flex items-center justify-between text-xs transition-all ${
+        className={`shrink-0 mb-2.5 px-3 py-2 rounded-2xl border flex items-center justify-between text-xs transition-all ${
           isLight
             ? "bg-amber-50/80 border-amber-200/80 text-slate-900"
             : "bg-slate-800/60 border-slate-700/60 text-slate-200"
@@ -265,15 +265,14 @@ export default function HourlySalesChart({
         )}
       </div>
 
-      {/* ── Chart Canvas ── */}
+      {/* ── Chart Canvas (Expands to fill height) ── */}
       <div
-        className="relative w-full"
-        style={{ minHeight: "175px" }}
+        className="flex-1 flex flex-col justify-center min-h-[220px] w-full pt-1 pb-1"
         onMouseLeave={() => setHoveredIndex(null)}
       >
         {chartStyle === "bar" ? (
           /* ── 1. Column Bars View ── */
-          <div className="flex items-end gap-1 sm:gap-2 h-44 w-full pt-4 pb-2">
+          <div className="flex items-end gap-1 sm:gap-2 h-52 w-full pt-4 pb-2">
             {activeDataset.map((bucket, idx) => {
               const val = getValue(bucket);
               const heightPct = Math.max(6, Math.round((val / Math.max(maxValue, 1)) * 100));
@@ -353,8 +352,8 @@ export default function HourlySalesChart({
           </div>
         ) : (
           /* ── 2. Smooth Bézier Line Wave View ── */
-          <div className="w-full h-44 pt-2 pb-2 flex flex-col justify-between">
-            <svg viewBox="0 0 800 150" className="w-full h-full overflow-visible">
+          <div className="w-full h-52 pt-2 pb-2 flex flex-col justify-between">
+            <svg viewBox="0 0 800 180" className="w-full h-full overflow-visible">
               <defs>
                 <linearGradient id="lineAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
@@ -369,9 +368,9 @@ export default function HourlySalesChart({
               </defs>
 
               {/* Grid Lines */}
-              <line x1="25" y1="20" x2="775" y2="20" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
-              <line x1="25" y1="75" x2="775" y2="75" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
-              <line x1="25" y1="130" x2="775" y2="130" stroke={isLight ? "#CBD5E1" : "#475569"} />
+              <line x1="25" y1="25" x2="775" y2="25" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
+              <line x1="25" y1="90" x2="775" y2="90" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
+              <line x1="25" y1="155" x2="775" y2="155" stroke={isLight ? "#CBD5E1" : "#475569"} />
 
               {/* Gradient Filled Area */}
               <path d={wavePath.area} fill="url(#lineAreaGradient)" />
@@ -431,9 +430,9 @@ export default function HourlySalesChart({
         )}
       </div>
 
-      {/* ── Bottom Scale Indicators ── */}
+      {/* ── Fixed Footer Scale Indicators ── */}
       <div
-        className={`flex items-center justify-between text-[9.5px] font-semibold pt-3 border-t mt-2 ${
+        className={`shrink-0 flex items-center justify-between text-[9.5px] font-semibold pt-3 border-t mt-2 ${
           isLight ? "border-slate-100 text-slate-500" : "border-slate-800 text-slate-400"
         }`}
       >
