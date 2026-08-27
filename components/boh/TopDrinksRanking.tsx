@@ -33,8 +33,8 @@ export default function TopDrinksRanking({
       }`}
     >
       {/* ── Fixed Header ── */}
-      <div className="shrink-0 mb-3">
-        <div className="flex items-center justify-between mb-2.5">
+      <div className="shrink-0 mb-2.5">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
               <Trophy size={16} />
@@ -54,15 +54,15 @@ export default function TopDrinksRanking({
           </span>
         </div>
 
-        {/* Category Pills Filter */}
+        {/* ── Category Pills Filter (No truncation, horizontal scrollable with no-scrollbar flex-nowrap) ── */}
         {categories.length > 2 && (
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none flex-nowrap py-1 mb-1">
             {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold capitalize transition-all shrink-0 cursor-pointer ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? "bg-amber-500 text-slate-950 font-black shadow-xs"
                     : isLight

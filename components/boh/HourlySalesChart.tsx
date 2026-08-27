@@ -89,20 +89,20 @@ export default function HourlySalesChart({
   const totalRevenueUSD = useMemo(() => activeDataset.reduce((s, d) => s + d.revenueUSD, 0), [activeDataset]);
   const totalOrders = useMemo(() => activeDataset.reduce((s, d) => s + d.orders, 0), [activeDataset]);
 
-  // Generate SVG path for Line / Area Wave View
+  // Generate SVG path for Line / Area Wave View (height: 240)
   const wavePath = useMemo(() => {
     if (activeDataset.length === 0) return { area: "", line: "", points: [] };
     const width = 800;
-    const height = 180;
+    const height = 240;
     const paddingX = 25;
-    const paddingY = 25;
+    const paddingY = 30;
     const chartW = width - paddingX * 2;
     const chartH = height - paddingY * 2;
 
     const points = activeDataset.map((d, i) => {
       const val = getValue(d);
       const x = paddingX + (i / (activeDataset.length - 1)) * chartW;
-      const y = height - paddingY - (val / Math.max(maxValue, 1)) * chartH;
+      const y = height - paddingY - (val / Math.max(maxValue, 1)) * (chartH * 0.92);
       return { x, y, bucket: d };
     });
 
@@ -135,7 +135,7 @@ export default function HourlySalesChart({
       }`}
     >
       {/* ── Fixed Header Controls ── */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
         <div>
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
@@ -228,7 +228,7 @@ export default function HourlySalesChart({
 
       {/* ── Active Hover / Callout ── */}
       <div
-        className={`shrink-0 mb-2.5 px-3 py-2 rounded-2xl border flex items-center justify-between text-xs transition-all ${
+        className={`shrink-0 mb-2 px-3 py-1.5 rounded-2xl border flex items-center justify-between text-xs transition-all ${
           isLight
             ? "bg-amber-50/80 border-amber-200/80 text-slate-900"
             : "bg-slate-800/60 border-slate-700/60 text-slate-200"
@@ -265,17 +265,18 @@ export default function HourlySalesChart({
         )}
       </div>
 
-      {/* ── Chart Canvas (Expands to fill height) ── */}
+      {/* ── Chart Canvas (Takes up full available height: flex-1 min-h-[280px] w-full flex flex-col justify-end) ── */}
       <div
-        className="flex-1 flex flex-col justify-center min-h-[220px] w-full pt-1 pb-1"
+        className="flex-1 min-h-[280px] w-full flex flex-col justify-end"
         onMouseLeave={() => setHoveredIndex(null)}
       >
         {chartStyle === "bar" ? (
-          /* ── 1. Column Bars View ── */
-          <div className="flex items-end gap-1 sm:gap-2 h-52 w-full pt-4 pb-2">
+          /* ── 1. Column Bars View with Scaled Fill ── */
+          <div className="flex items-end gap-1 sm:gap-2 h-full min-h-[270px] w-full pt-6 pb-1">
             {activeDataset.map((bucket, idx) => {
               const val = getValue(bucket);
-              const heightPct = Math.max(6, Math.round((val / Math.max(maxValue, 1)) * 100));
+              // Scale bar heights proportionally so peak bar reaches near top (up to 92%)
+              const heightPct = Math.max(8, Math.round((val / Math.max(maxValue, 1)) * 92));
               const isPeak = bucket.label === peakBucket.label;
               const isHovered = hoveredIndex === idx;
               const isSelected = selectedBarIndex === idx;
@@ -292,19 +293,19 @@ export default function HourlySalesChart({
                 >
                   {/* Peak Flame */}
                   {isPeak && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 animate-bounce">
-                      <Flame size={12} className="text-amber-500 fill-amber-500 drop-shadow-md" />
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 animate-bounce">
+                      <Flame size={13} className="text-amber-500 fill-amber-500 drop-shadow-md" />
                     </div>
                   )}
 
-                  {/* Value Label on Top */}
+                  {/* Legible Amount Label above each bar: text-xs font-semibold text-slate-700 dark:text-slate-200 */}
                   <span
-                    className={`text-[8.5px] font-bold mb-1 transition-all truncate max-w-full ${
+                    className={`text-xs font-semibold mb-1.5 transition-all truncate max-w-full ${
                       isSelected || isHovered || isPeak
-                        ? "text-amber-600 dark:text-amber-400 font-extrabold scale-110"
+                        ? "text-amber-700 dark:text-amber-300 font-extrabold scale-110"
                         : isLight
-                        ? "text-slate-400"
-                        : "text-slate-500"
+                        ? "text-slate-700 font-semibold"
+                        : "text-slate-300 font-semibold"
                     }`}
                   >
                     {formatValue(val, true)}
@@ -314,7 +315,7 @@ export default function HourlySalesChart({
                   <div className="w-full flex-1 flex items-end">
                     <div
                       style={{ height: `${heightPct}%` }}
-                      className={`w-full rounded-t-lg transition-all duration-300 ${
+                      className={`w-full rounded-t-xl transition-all duration-300 ${
                         isSelected
                           ? "bg-gradient-to-t from-amber-500 to-amber-300 ring-2 ring-amber-400 shadow-lg shadow-amber-500/50"
                           : isPeak
@@ -330,7 +331,7 @@ export default function HourlySalesChart({
 
                   {/* X-Axis Day / Hour Label */}
                   <span
-                    className={`text-[9.5px] mt-1.5 font-bold transition-colors truncate max-w-full ${
+                    className={`text-[10px] mt-2 font-bold transition-colors truncate max-w-full ${
                       isSelected
                         ? "text-amber-600 dark:text-amber-400 font-black underline underline-offset-2"
                         : isPeak
@@ -340,7 +341,7 @@ export default function HourlySalesChart({
                           ? "text-slate-900"
                           : "text-white"
                         : isLight
-                        ? "text-slate-500"
+                        ? "text-slate-600"
                         : "text-slate-400"
                     }`}
                   >
@@ -351,9 +352,9 @@ export default function HourlySalesChart({
             })}
           </div>
         ) : (
-          /* ── 2. Smooth Bézier Line Wave View ── */
-          <div className="w-full h-52 pt-2 pb-2 flex flex-col justify-between">
-            <svg viewBox="0 0 800 180" className="w-full h-full overflow-visible">
+          /* ── 2. Smooth Bézier Line Wave View with Full Height ── */
+          <div className="w-full h-full min-h-[270px] pt-4 pb-1 flex flex-col justify-between">
+            <svg viewBox="0 0 800 240" className="w-full h-full overflow-visible">
               <defs>
                 <linearGradient id="lineAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
@@ -368,9 +369,9 @@ export default function HourlySalesChart({
               </defs>
 
               {/* Grid Lines */}
-              <line x1="25" y1="25" x2="775" y2="25" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
-              <line x1="25" y1="90" x2="775" y2="90" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
-              <line x1="25" y1="155" x2="775" y2="155" stroke={isLight ? "#CBD5E1" : "#475569"} />
+              <line x1="25" y1="30" x2="775" y2="30" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
+              <line x1="25" y1="110" x2="775" y2="110" stroke={isLight ? "#E2E8F0" : "#334155"} strokeDasharray="3 3" />
+              <line x1="25" y1="190" x2="775" y2="190" stroke={isLight ? "#CBD5E1" : "#475569"} />
 
               {/* Gradient Filled Area */}
               <path d={wavePath.area} fill="url(#lineAreaGradient)" />
@@ -419,7 +420,7 @@ export default function HourlySalesChart({
             </svg>
 
             {/* X-Axis labels */}
-            <div className="flex justify-between text-[9.5px] font-bold text-slate-500 dark:text-slate-400 px-2 pt-1">
+            <div className="flex justify-between text-[10px] font-bold text-slate-600 dark:text-slate-400 px-2 pt-1">
               {activeDataset.map((b) => (
                 <span key={b.label} className={b.label === peakBucket.label ? "text-amber-600 dark:text-amber-400 font-black" : ""}>
                   {b.label}
@@ -432,7 +433,7 @@ export default function HourlySalesChart({
 
       {/* ── Fixed Footer Scale Indicators ── */}
       <div
-        className={`shrink-0 flex items-center justify-between text-[9.5px] font-semibold pt-3 border-t mt-2 ${
+        className={`shrink-0 flex items-center justify-between text-[9.5px] font-semibold pt-2.5 border-t mt-2 ${
           isLight ? "border-slate-100 text-slate-500" : "border-slate-800 text-slate-400"
         }`}
       >

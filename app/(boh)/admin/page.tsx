@@ -407,9 +407,9 @@ export default function CafeDashboard() {
         />
       </div>
 
-      {/* ── Main Interactive Data Visualizations Row (Equalized Grid Heights lg:h-[480px]) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch lg:h-[480px]">
-        {/* 1. Interactive Hourly / 7-Day Velocity Chart (2 Columns) */}
+      {/* ── ROW 1: Equal-Height Grid (~430px) - Hourly Velocity Chart (2/3) + Top Drinks Ranking (1/3) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch lg:h-[440px]">
+        {/* 1. Interactive Hourly / 7-Day Velocity Chart (2 Columns, Full Vertical Fill) */}
         <div className="lg:col-span-2 h-full">
           <HourlySalesChart
             data={analytics.hourlyData}
@@ -421,8 +421,8 @@ export default function CafeDashboard() {
           />
         </div>
 
-        {/* 2. Top Drinks Leaderboard with Internal Scrolling (1 Column) */}
-        <div className="h-full">
+        {/* 2. Top Drinks Leaderboard with Internal Scrolling (1 Column, max-h-[440px]) */}
+        <div className="h-full max-h-[440px]">
           <TopDrinksRanking
             products={analytics.topProducts}
             isLight={isLight}
@@ -430,7 +430,7 @@ export default function CafeDashboard() {
         </div>
       </div>
 
-      {/* ── Bottom Operational Insights Grid ── */}
+      {/* ── ROW 2: Bottom Operational Grid - Ingredient Burn Card (2/3) + Staff Utilization (1/3) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         {/* 3. Actionable Ingredient Usage & Stock Depletion Card (2 Columns) */}
         <div className="lg:col-span-2 h-full">
