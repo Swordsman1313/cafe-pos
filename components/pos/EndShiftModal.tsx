@@ -32,7 +32,7 @@ export function EndShiftModal({
   onHandoverShift,
   onOpenHeldOrders,
   onToast,
-  storeName = "ON MART TOUL KORK 592",
+  storeName = "The Daily Drip - Toul Kork 592",
 }: EndShiftModalProps) {
   const [endShiftStep, setEndShiftStep] = useState<"count" | "pin" | "report">("count");
   const [endShiftPin, setEndShiftPin] = useState("");

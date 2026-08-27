@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Artisan Roast Café POS & Back-of-House Enterprise SaaS",
-  description: "Commercial-grade Café POS, Kitchen Display System, BOM Inventory, and Multi-Store Management",
+  title: "The Daily Drip — Coffee POS & Management",
+  description: "Touchscreen-first Coffee POS, Kitchen Display System, BOM Inventory, and Shift Management",
 };
 
 export default function RootLayout({

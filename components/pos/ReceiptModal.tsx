@@ -50,7 +50,7 @@ export function ReceiptModal({
   order,
   onNewOrder,
   onClose,
-  storeName = "ON MART TOUL KORK 592",
+  storeName = "The Daily Drip - Toul Kork 592",
   storeAddressKhmer = "ដីឡូត៍លេខ០១ ផ្លូវ៥៩២ កែងផ្លូវ៣០៦ បឹងកក់ទី២ ទួលគោក រាជធានីភ្នំពេញ",
   vattin = "L001-901503056",
   exchangeRate = 4100,
@@ -117,9 +117,9 @@ export function ReceiptModal({
             {/* 1. Header Logo & Khmer Branding */}
             <div className="text-center space-y-1 pb-2 border-b border-dashed border-stone-300">
               <div className="inline-flex flex-col items-center justify-center">
-                {/* Monakom / ON MART Style Logo Badge */}
-                <div className="h-10 px-3 rounded-lg bg-black text-white font-black tracking-tighter text-base flex items-center justify-center leading-none">
-                  ON MART
+                {/* The Daily Drip Logo Badge */}
+                <div className="h-10 px-4 rounded-xl bg-[#4A2E1F] text-white font-black tracking-tight text-sm uppercase flex items-center justify-center leading-none shadow-xs">
+                  The Daily Drip
                 </div>
               </div>
               <div className="font-sans font-bold text-xs text-stone-900 tracking-tight mt-1">

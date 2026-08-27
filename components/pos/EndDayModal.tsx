@@ -43,7 +43,7 @@ export function EndDayModal({
   onClose,
   onConfirmEndDay,
   onOpenHeldOrders,
-  storeName = "ON MART TOUL KORK 592",
+  storeName = "The Daily Drip - Toul Kork 592",
 }: EndDayModalProps) {
   const [endDayStep, setEndDayStep] = useState<"summary" | "pin" | "report">("summary");
   const [endDayPin, setEndDayPin] = useState<string>("");

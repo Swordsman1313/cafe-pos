@@ -1072,10 +1072,10 @@ export default function PosRegisterPage() {
             className="flex h-7.5 w-7.5 items-center justify-center rounded-xl text-white font-black text-xs shadow-sm"
             style={{ background: "#4A2E1F" }}
           >
-            K
+            ☕
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xs font-black text-stone-900 tracking-tight">Artisan Roast</h1>
+            <h1 className="text-xs font-black text-stone-900 tracking-tight">The Daily Drip</h1>
             <div className="h-3.5 w-px bg-stone-200" />
             <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
               <Clock size={11} className="text-stone-500" />
