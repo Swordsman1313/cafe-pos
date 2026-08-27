@@ -1,33 +1,29 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
-  Package,
   AlertTriangle,
   CheckCircle2,
+  TrendingDown,
   Clock,
-  Flame,
   ShoppingCart,
-  Truck,
-  ArrowUpDown,
-  Filter,
   Layers,
+  ArrowUpDown,
   Sparkles,
-  Check,
+  Info,
+  Package,
 } from "lucide-react";
 import { IngredientUsage } from "@/lib/analytics-aggregator";
-import QuickRestockModal from "@/components/boh/QuickRestockModal";
+import QuickRestockModal from "./QuickRestockModal";
 
 interface StockDepletionCardProps {
   ingredients: IngredientUsage[];
   isLight?: boolean;
-  onReplenishIngredient?: (ingredientId: string) => void;
 }
 
 export default function StockDepletionCard({
   ingredients: initialIngredients,
   isLight = false,
-  onReplenishIngredient,
 }: StockDepletionCardProps) {
   const [ingredients, setIngredients] = useState<IngredientUsage[]>(initialIngredients);
   const [filter, setFilter] = useState<"all" | "critical" | "moderate" | "safe">("all");
@@ -35,7 +31,7 @@ export default function StockDepletionCard({
   const [activeRestockItem, setActiveRestockItem] = useState<IngredientUsage | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync if initial prop changes
+  // Sync if prop changes
   React.useEffect(() => {
     setIngredients(initialIngredients);
   }, [initialIngredients]);
@@ -43,59 +39,54 @@ export default function StockDepletionCard({
   // Counts
   const criticalCount = ingredients.filter((i) => i.status === "critical").length;
   const moderateCount = ingredients.filter((i) => i.status === "moderate").length;
-  const safeCount = ingredients.filter((i) => i.status === "healthy" || i.status === "po_issued").length;
+  const safeCount = ingredients.filter((i) => i.status === "healthy").length;
 
   // Filter & Sort
-  const processedList = useMemo(() => {
-    let list = [...ingredients];
-    if (filter === "critical") list = list.filter((i) => i.status === "critical");
-    if (filter === "moderate") list = list.filter((i) => i.status === "moderate");
-    if (filter === "safe") list = list.filter((i) => i.status === "healthy" || i.status === "po_issued");
+  const processedList = [...ingredients]
+    .filter((item) => {
+      if (filter === "critical") return item.status === "critical";
+      if (filter === "moderate") return item.status === "moderate";
+      if (filter === "safe") return item.status === "healthy";
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "depletion") return b.depletionPct - a.depletionPct;
+      if (sortBy === "hours") return a.hoursUntilDepletion - b.hoursUntilDepletion;
+      return a.name.localeCompare(b.name);
+    });
 
-    if (sortBy === "depletion") {
-      list.sort((a, b) => b.depletionPct - a.depletionPct);
-    } else if (sortBy === "hours") {
-      list.sort((a, b) => a.hoursUntilDepletion - b.hoursUntilDepletion);
-    } else if (sortBy === "name") {
-      list.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return list;
-  }, [ingredients, filter, sortBy]);
-
-  // Handle instant state mutation
+  // Handler for Modal Restock & PO Actions
   const handleConfirmRestock = (
-    ingredientId: string,
-    quantityPacks: number,
-    actionType: "replenish" | "po_issued"
+    action: "replenish" | "po_issued",
+    qty: number,
+    target: IngredientUsage
   ) => {
-    const target = ingredients.find((i) => i.id === ingredientId);
-    if (!target) return;
-
-    if (actionType === "replenish") {
+    if (action === "replenish") {
+      // 1. Immediate Quick Delivery: Reset used capacity to 0% (100% full), healthy status
       setIngredients((prev) =>
         prev.map((i) =>
-          i.id === ingredientId
+          i.id === target.id
             ? {
                 ...i,
                 currentUsed: 0,
                 depletionPct: 0,
                 status: "healthy",
                 statusLabel: "Healthy Stock",
-                hoursUntilDepletion: 8.0,
+                hoursUntilDepletion: 14.5,
               }
             : i
         )
       );
-      setToastMessage(`Stock updated: Added ${quantityPacks} pack(s) to ${target.name}`);
-      onReplenishIngredient?.(ingredientId);
-    } else if (actionType === "po_issued") {
+      setToastMessage(`Stock updated: Added ${qty} pack(s) to ${target.name}`);
+    } else {
+      // 2. Create PO: Mark item status as PO Issued
       setIngredients((prev) =>
         prev.map((i) =>
-          i.id === ingredientId
+          i.id === target.id
             ? {
                 ...i,
                 status: "po_issued",
-                statusLabel: "PO Issued • Pending Delivery",
+                statusLabel: "PO Issued · Pending Delivery",
               }
             : i
         )
@@ -123,21 +114,16 @@ export default function StockDepletionCard({
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* ── Header (Clean, no subtitle) ── */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center font-bold">
               <Package size={16} />
             </div>
-            <div>
-              <h2 className="text-sm font-extrabold flex items-center gap-2">
-                Ingredient Burn &amp; Depletion Velocity
-              </h2>
-              <p className={`text-[11px] mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                Actionable restock triggers &amp; real-time hours-to-depletion
-              </p>
-            </div>
+            <h2 className="text-sm font-extrabold flex items-center gap-2">
+              Ingredient Burn &amp; Depletion Velocity
+            </h2>
           </div>
 
           {criticalCount > 0 ? (
@@ -225,8 +211,8 @@ export default function StockDepletionCard({
           </div>
         </div>
 
-        {/* ── Ingredient Usage Items with 1-Tap Actions ── */}
-        <div className="space-y-3 pt-1">
+        {/* ── Ingredient Usage Items ── */}
+        <div className="space-y-2.5 pt-1">
           {processedList.map((item) => {
             const isCritical = item.status === "critical"; // > 85%
             const isModerate = item.status === "moderate"; // 60 - 85%
@@ -235,7 +221,7 @@ export default function StockDepletionCard({
             return (
               <div
                 key={item.id}
-                className={`p-3.5 rounded-2xl border transition-all hover:scale-[1.005] ${
+                className={`p-3 rounded-2xl border transition-all hover:scale-[1.005] ${
                   isLight
                     ? isCritical
                       ? "bg-rose-50/60 border-rose-200"
@@ -249,23 +235,33 @@ export default function StockDepletionCard({
                     : isModerate
                     ? "bg-amber-950/20 border-amber-500/20"
                     : isPOIssued
-                    ? "bg-amber-950/30 border-amber-500/30 shadow-xs"
+                    ? "bg-amber-950/30 border-amber-500/30"
                     : "bg-slate-800/40 border-slate-700/40"
                 }`}
               >
-                {/* Top Row: Icon, Name, Values & Threshold Badge */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xl select-none">{item.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`font-bold text-xs leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
+                {/* Main Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-2xl shrink-0 p-1 bg-black/10 rounded-xl select-none">
+                      {item.icon}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-bold text-xs truncate ${isLight ? "text-slate-900" : "text-white"}`}>
                           {item.name}
                         </span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
-                          isLight ? "bg-slate-200/80 text-slate-600" : "bg-slate-700 text-slate-300"
-                        }`}>
-                          {item.category}
+                        <span
+                          className={`text-[9.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            isCritical
+                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                              : isPOIssued
+                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                              : isModerate
+                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                              : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          }`}
+                        >
+                          {item.statusLabel}
                         </span>
                       </div>
 
@@ -336,9 +332,9 @@ export default function StockDepletionCard({
                   </div>
                 </div>
 
-                {/* ── Progress Bar with Dynamic Threshold Colors ── */}
-                <div className="space-y-1 mt-2">
-                  <div className={`h-2 rounded-full overflow-hidden ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
+                {/* ── Slim Clean Progress Bar (Repeating percentage labels removed) ── */}
+                <div className="mt-2">
+                  <div className={`h-1.5 rounded-full overflow-hidden ${isLight ? "bg-slate-200/80" : "bg-slate-800"}`}>
                     <div
                       style={{ width: `${Math.min(item.depletionPct, 100)}%` }}
                       className={`h-full rounded-full transition-all duration-700 ${
@@ -352,18 +348,6 @@ export default function StockDepletionCard({
                       }`}
                     />
                   </div>
-
-                  {/* Threshold Scale */}
-                  <div className="flex justify-between text-[8px] font-semibold text-slate-400 px-0.5">
-                    <span>0% (Full)</span>
-                    <span className={item.depletionPct >= 60 && item.depletionPct < 85 ? "text-amber-500 font-bold" : ""}>
-                      60% Moderate Line
-                    </span>
-                    <span className={item.depletionPct >= 85 ? "text-rose-500 font-bold" : ""}>
-                      85% Restock Alert
-                    </span>
-                    <span>100% (Depleted)</span>
-                  </div>
                 </div>
               </div>
             );
@@ -371,7 +355,7 @@ export default function StockDepletionCard({
         </div>
       </div>
 
-      {/* ── Legend Footer ── */}
+      {/* ── Single Global Threshold Legend Footer ── */}
       <div
         className={`pt-3 border-t mt-4 text-[9.5px] flex flex-wrap items-center justify-between gap-2 ${
           isLight ? "border-slate-100 text-slate-400" : "border-slate-800 text-slate-500"
@@ -379,24 +363,26 @@ export default function StockDepletionCard({
       >
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> &lt;60% Healthy
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" /> &lt;60% Safe
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-amber-500" /> 60–85% Moderate
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" /> 60–85% Moderate
           </span>
-          <span className="flex items-center gap-1 font-bold text-rose-400">
-            <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" /> &gt;85% Restock Alert
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500 inline-block" /> &gt;85% Restock Alert
           </span>
         </div>
-        <span className="text-slate-400 font-medium">Auto-calculated from recipe BOM burn rates</span>
+        <span className="font-semibold text-slate-400">
+          Showing {processedList.length} of {ingredients.length} items
+        </span>
       </div>
 
-      {/* ── Quick Restock Purchase Order Modal ── */}
+      {/* Quick Restock Dialog Modal */}
       {activeRestockItem && (
         <QuickRestockModal
           ingredient={activeRestockItem}
           onClose={() => setActiveRestockItem(null)}
-          onConfirmRestock={handleConfirmRestock}
+          onConfirmRestock={(_id, qty, action) => handleConfirmRestock(action, qty, activeRestockItem)}
           isLight={isLight}
         />
       )}

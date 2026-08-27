@@ -142,19 +142,12 @@ export default function HourlySalesChart({
             <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
               {isWeeklyView ? <Calendar size={16} /> : <BarChart3 size={16} />}
             </div>
-            <div>
-              <h2 className="text-sm font-extrabold flex items-center gap-2">
-                {isWeeklyView ? "7-Day Revenue & Daily Volume" : "Hourly Velocity & Rush Architecture"}
-                <span className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-500/20 text-amber-500 px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                  <Flame size={10} className="fill-amber-500" /> Peak {peakBucket.label}
-                </span>
-              </h2>
-              <p className={`text-[11px] mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                {isWeeklyView
-                  ? "Daily revenue & total tickets across the 7-day window"
-                  : "Click any hour column for granular item breakdown & ring-up speed"}
-              </p>
-            </div>
+            <h2 className="text-sm font-extrabold flex items-center gap-2">
+              {isWeeklyView ? "7-Day Revenue & Daily Volume" : "Hourly Velocity & Rush Architecture"}
+              <span className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-500/20 text-amber-500 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                <Flame size={10} className="fill-amber-500" /> Peak {peakBucket.label}
+              </span>
+            </h2>
           </div>
         </div>
 
