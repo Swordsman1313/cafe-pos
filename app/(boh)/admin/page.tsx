@@ -82,8 +82,8 @@ function KpiCard({
           {value}
         </p>
         <div className="flex items-center gap-1.5 mt-1">
-          {trend === "up" && <ArrowUpRight size={13} className="text-emerald-400 font-bold" />}
-          {trend === "down" && <ArrowDownRight size={13} className="text-rose-400 font-bold" />}
+          {trend === "up" && <ArrowUpRight size={13} className="text-emerald-500 font-bold" />}
+          {trend === "down" && <ArrowDownRight size={13} className="text-rose-500 font-bold" />}
           {trend === "flat" && <Minus size={13} className="text-slate-400" />}
           <p className={`text-[11px] font-semibold truncate ${isLight ? "text-slate-500" : "text-slate-400"}`}>
             {sub}
@@ -115,6 +115,7 @@ export default function CafeDashboard() {
     aggregatePOSAnalytics([], { datePreset: "today", startDate: todayStr, endDate: todayStr })
   );
   const [loading, setLoading] = useState(false);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -131,7 +132,7 @@ export default function CafeDashboard() {
   }, []);
 
   // Fetch / Sync Live POS Orders + Server API Analytics
-  const syncDashboardData = useCallback(() => {
+  const syncDashboardData = useCallback((showToastAlert = false) => {
     startTransition(async () => {
       setLoading(true);
       try {
@@ -167,6 +168,13 @@ export default function CafeDashboard() {
         });
 
         setAnalytics(aggregated);
+
+        if (showToastAlert) {
+          setSyncToast("Data synchronized with POS terminal");
+          setTimeout(() => {
+            setSyncToast(null);
+          }, 3500);
+        }
       } catch (err) {
         console.error("Failed to sync BOH analytics", err);
       } finally {
@@ -176,7 +184,7 @@ export default function CafeDashboard() {
   }, [dateRange]);
 
   useEffect(() => {
-    syncDashboardData();
+    syncDashboardData(false);
   }, [syncDashboardData]);
 
   // ─── Automated Export Trigger: Excel (.xlsx) ─────────────────────────────────
@@ -313,12 +321,12 @@ export default function CafeDashboard() {
               <div>
                 <h1 className="text-base sm:text-lg font-extrabold tracking-tight flex items-center gap-2">
                   The Daily Drip Intelligence
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                     ● Live Sync
                   </span>
                 </h1>
                 <p className={`text-[11px] ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                  Active Window: <strong className="text-amber-500">{analytics.dateRangeLabel}</strong> · Branch #01 Toul Kork
+                  Active Window: <strong className="text-amber-700 dark:text-amber-400">{analytics.dateRangeLabel}</strong> · Branch #01 Toul Kork
                 </p>
               </div>
             </div>
@@ -336,21 +344,29 @@ export default function CafeDashboard() {
 
             <button
               type="button"
-              onClick={syncDashboardData}
+              onClick={() => syncDashboardData(true)}
               disabled={loading || isPending}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer shadow-2xs ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer shadow-2xs ${
                 isLight
                   ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                   : "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
               }`}
-              title="Refresh analytics and sync with live POS orders"
+              title="Refresh analytics and sync with live POS terminal"
             >
-              <RefreshCw size={13} className={loading || isPending ? "animate-spin text-amber-400" : ""} />
-              <span className="hidden sm:inline">Sync</span>
+              <RefreshCw size={13} className={loading || isPending ? "animate-spin text-amber-500" : "text-amber-500"} />
+              <span>{loading || isPending ? "Syncing..." : "Sync"}</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* ── Top Header Toast Alert on Sync ── */}
+      {syncToast && (
+        <div className="fixed top-16 right-6 z-50 bg-emerald-500 text-slate-950 font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-emerald-300 flex items-center gap-2 animate-in slide-in-from-top-3 duration-200">
+          <CheckCircle2 size={16} className="text-slate-950 shrink-0" />
+          <span>{syncToast}</span>
+        </div>
+      )}
 
       {/* ── Top KPI Strip ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -359,7 +375,7 @@ export default function CafeDashboard() {
           value={`$${analytics.totalRevenueUSD.toFixed(2)}`}
           sub={`${analytics.totalRevenueKHR.toLocaleString()} ៛ · ${analytics.dateRangeLabel}`}
           icon={DollarSign}
-          iconColor="bg-amber-500/15 text-amber-400"
+          iconColor="bg-amber-500/15 text-amber-500"
           trend="up"
           isLight={isLight}
         />
@@ -368,7 +384,7 @@ export default function CafeDashboard() {
           value={String(analytics.totalOrders)}
           sub={`Avg ticket $${analytics.avgTicketUSD.toFixed(2)} (${analytics.totalItemsSold} drinks)`}
           icon={ShoppingBag}
-          iconColor="bg-blue-500/15 text-blue-400"
+          iconColor="bg-blue-500/15 text-blue-500"
           trend="up"
           isLight={isLight}
         />
@@ -377,7 +393,7 @@ export default function CafeDashboard() {
           value={`${analytics.grossMarginPercent}%`}
           sub={`Profit $${analytics.grossProfitUSD.toFixed(2)} · COGS $${analytics.totalCOGSUSD.toFixed(2)}`}
           icon={Percent}
-          iconColor="bg-emerald-500/15 text-emerald-400"
+          iconColor="bg-emerald-500/15 text-emerald-500"
           trend="flat"
           isLight={isLight}
         />
@@ -386,7 +402,7 @@ export default function CafeDashboard() {
           value={analytics.peakHourLabel}
           sub={`$${analytics.peakHourRevenueUSD.toFixed(2)} (${analytics.peakHourOrders} tickets)`}
           icon={Flame}
-          iconColor="bg-orange-500/15 text-orange-400"
+          iconColor="bg-orange-500/15 text-orange-500"
           isLight={isLight}
         />
       </div>

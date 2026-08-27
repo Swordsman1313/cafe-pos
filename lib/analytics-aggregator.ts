@@ -37,6 +37,17 @@ export interface HourlyItemBreakdown {
   category: string;
 }
 
+export interface HourlyTicketReceipt {
+  ticketNumber: string; // e.g. "#T-108"
+  time: string; // e.g. "9:14 AM"
+  itemsSummary: string; // e.g. "2x Cambodian Iced Coffee, 1x Croissant"
+  itemCount: number;
+  totalUSD: number;
+  totalKHR: number;
+  paymentMethod: "KHQR" | "Cash" | "Card";
+  cashier: string; // "Dara", "Sophea"
+}
+
 export interface HourlyBucket {
   hour: number;
   label: string;
@@ -50,6 +61,7 @@ export interface HourlyBucket {
   isPeak: boolean;
   pctOfDaily: number;
   topSellingItems: HourlyItemBreakdown[];
+  ticketsList: HourlyTicketReceipt[];
   paymentSplit: {
     cashUSD: number;
     khqrUSD: number;
@@ -70,6 +82,7 @@ export interface DailyBucket {
   isPeak: boolean;
   pctOfDaily: number; // pct of 7-day total
   topSellingItems: HourlyItemBreakdown[];
+  ticketsList: HourlyTicketReceipt[];
   paymentSplit: {
     cashUSD: number;
     khqrUSD: number;
@@ -184,6 +197,46 @@ export function getDepletionStatus(pct: number): { status: "healthy" | "moderate
     return { status: "moderate", statusLabel: "Moderate Usage" };
   }
   return { status: "healthy", statusLabel: "Healthy Stock" };
+}
+
+/**
+ * Helper to generate mock / sample ticket list for a given hour or day
+ */
+function generateSampleTickets(hourOrDay: number | string, baseTicketNum = 100): HourlyTicketReceipt[] {
+  const staffNames = ["Dara", "Sophea", "Channary"];
+  const paymentTypes: Array<"KHQR" | "Cash" | "Card"> = ["KHQR", "KHQR", "Cash", "Card"];
+  const itemPresets = [
+    { items: "2x Cambodian Iced Coffee, 1x Croissant", count: 3, usd: 9.75 },
+    { items: "1x Espresso Tonic, 1x Oat Milk Latte", count: 2, usd: 8.50 },
+    { items: "1x Cold Brew Float", count: 1, usd: 5.00 },
+    { items: "2x Matcha Latte, 2x Almond Pastry", count: 4, usd: 16.50 },
+    { items: "1x Hot Americano", count: 1, usd: 3.00 },
+    { items: "1x Croissant Breakfast Combo", count: 2, usd: 6.50 },
+  ];
+
+  const tickets: HourlyTicketReceipt[] = [];
+  const count = typeof hourOrDay === "number" ? Math.min(5, Math.max(3, (hourOrDay % 4) + 2)) : 6;
+
+  for (let i = 0; i < count; i++) {
+    const preset = itemPresets[i % itemPresets.length];
+    const pMethod = paymentTypes[i % paymentTypes.length];
+    const cashier = staffNames[i % staffNames.length];
+    const minute = String((i * 12 + 4) % 60).padStart(2, "0");
+    const timeStr = typeof hourOrDay === "number" ? `${hourOrDay > 12 ? hourOrDay - 12 : hourOrDay}:${minute} ${hourOrDay >= 12 ? "PM" : "AM"}` : `${hourOrDay} 10:${minute} AM`;
+
+    tickets.push({
+      ticketNumber: `#T-${baseTicketNum + i + 1}`,
+      time: timeStr,
+      itemsSummary: preset.items,
+      itemCount: preset.count,
+      totalUSD: preset.usd,
+      totalKHR: Math.round(preset.usd * KHR_EXCHANGE_RATE),
+      paymentMethod: pMethod,
+      cashier,
+    });
+  }
+
+  return tickets;
 }
 
 /**
@@ -372,6 +425,7 @@ export function aggregatePOSAnalytics(
         { name: "Oat Milk Latte", qty: Math.round(ords * 0.17), revenueUSD: Number((ords * 0.17 * 4.5).toFixed(2)), category: "Hot" },
         { name: "Croissant Breakfast Combo", qty: Math.round(ords * 0.12), revenueUSD: Number((ords * 0.12 * 6.5).toFixed(2)), category: "Combos" },
       ],
+      ticketsList: generateSampleTickets(d, 200 + idx * 10),
       paymentSplit: {
         cashUSD: Number((rev * 0.34).toFixed(2)),
         khqrUSD: Number((rev * 0.58).toFixed(2)),
@@ -565,6 +619,7 @@ export function aggregatePOSAnalytics(
       isPeak,
       pctOfDaily,
       topSellingItems: topItems,
+      ticketsList: generateSampleTickets(h.hour, h.hour * 10),
       paymentSplit: {
         cashUSD: Number(bucket.cashUSD.toFixed(2)),
         khqrUSD: Number(bucket.khqrUSD.toFixed(2)),
@@ -739,7 +794,7 @@ export function aggregatePOSAnalytics(
     };
   });
 
-  // Staff Utilization Metrics
+  // Staff Utilization Metrics with accurate calibration (Channary at ~28.5%)
   const staff: StaffUtilization[] = [
     {
       id: "staff-01",
@@ -748,8 +803,8 @@ export function aggregatePOSAnalytics(
       shift: "Shift #1 (7:00 AM – 3:00 PM)",
       avatarBg: "bg-amber-600",
       ticketsPerHour: Number(((grandTotalOrders * 0.58) / (isWeeklyView ? 49 : 7)).toFixed(1)),
-      activeTimePct: 84,
-      idleTimePct: 16,
+      activeTimePct: 84.0,
+      idleTimePct: 16.0,
       totalRevenueHandledUSD: Number((grandTotalRevenueUSD * 0.62).toFixed(2)),
       avgTicketTimeSec: 38,
       status: "Active",
@@ -761,8 +816,8 @@ export function aggregatePOSAnalytics(
       shift: "Shift #1 (7:00 AM – 3:00 PM)",
       avatarBg: "bg-emerald-600",
       ticketsPerHour: Number(((grandTotalOrders * 0.42) / (isWeeklyView ? 49 : 7)).toFixed(1)),
-      activeTimePct: 91,
-      idleTimePct: 9,
+      activeTimePct: 91.0,
+      idleTimePct: 9.0,
       totalRevenueHandledUSD: Number((grandTotalRevenueUSD * 0.38).toFixed(2)),
       avgTicketTimeSec: 54,
       status: "Active",
@@ -773,10 +828,10 @@ export function aggregatePOSAnalytics(
       role: "Shift Supervisor",
       shift: "Floor Supervisor (8:00 AM – 4:00 PM)",
       avatarBg: "bg-indigo-600",
-      ticketsPerHour: 6.4,
-      activeTimePct: 76,
-      idleTimePct: 24,
-      totalRevenueHandledUSD: Number((grandTotalRevenueUSD * 0.15).toFixed(2)),
+      ticketsPerHour: 4.8,
+      activeTimePct: 28.5, // Specifically calibrated low-volume staff
+      idleTimePct: 71.5,
+      totalRevenueHandledUSD: Number((grandTotalRevenueUSD * 0.12).toFixed(2)),
       avgTicketTimeSec: 46,
       status: "Active",
     },

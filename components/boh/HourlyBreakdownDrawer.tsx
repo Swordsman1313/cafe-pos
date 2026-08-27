@@ -14,6 +14,8 @@ import {
   Banknote,
   TrendingUp,
   Award,
+  Receipt,
+  UserCheck,
 } from "lucide-react";
 import { HourlyBucket, DailyBucket } from "@/lib/analytics-aggregator";
 
@@ -53,16 +55,16 @@ export default function HourlyBreakdownDrawer({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ${
+        className={`w-full max-w-lg h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ${
           isLight ? "bg-white text-slate-900 border-l border-slate-200" : "bg-slate-900 text-white border-l border-slate-800"
         }`}
       >
         {/* ── Top Header ── */}
-        <div>
+        <div className="space-y-4">
           <div className="flex items-center justify-between border-b pb-4 border-slate-200/60 dark:border-slate-800">
             <div>
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
                   <Clock size={16} />
                 </div>
                 <div>
@@ -70,7 +72,7 @@ export default function HourlyBreakdownDrawer({
                     {bucket.windowTitle}
                   </h2>
                   <p className={`text-[11px] font-medium ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                    Window Performance &amp; Item Breakdown
+                    Hourly Drill-Down, Receipts &amp; Prep Speed
                   </p>
                 </div>
               </div>
@@ -87,93 +89,95 @@ export default function HourlyBreakdownDrawer({
 
           {/* Peak Banner if peak bucket */}
           {bucket.isPeak && (
-            <div className="my-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/30 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-amber-400 text-xs font-black">
-                <Flame size={16} className="fill-amber-400 animate-pulse" />
-                <span>HIGHEST VOLUME WINDOW</span>
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-black">
+                <Flame size={16} className="fill-amber-500 animate-pulse" />
+                <span>DAY'S HIGHEST PEAK VOLUME</span>
               </div>
-              <span className="text-[10.5px] font-bold text-amber-300 bg-amber-500/30 px-2 py-0.5 rounded-md">
+              <span className="text-[10.5px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-md">
                 {bucket.pctOfDaily}% of Total Sales
               </span>
             </div>
           )}
 
-          {/* ── 4 Key Metrics ── */}
-          <div className="grid grid-cols-2 gap-2.5 my-4">
-            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-slate-800/60 border-slate-700/60"}`}>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Revenue</span>
-              <span className="text-xl font-extrabold text-amber-500 block leading-tight">
+          {/* ── 4 Key Metric Summary Cards ── */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+              <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Revenue</span>
+              <span className={`text-xl font-black block leading-tight ${isLight ? "text-slate-900" : "text-amber-400"}`}>
                 ${bucket.revenueUSD.toFixed(2)}
               </span>
-              <span className={`text-[10px] font-semibold ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+              <span className={`text-[10px] font-medium ${isLight ? "text-slate-600" : "text-slate-400"}`}>
                 {bucket.revenueKHR.toLocaleString()} ៛
               </span>
             </div>
 
-            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-slate-800/60 border-slate-700/60"}`}>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Order Volume</span>
-              <span className={`text-xl font-extrabold block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+              <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Order Volume</span>
+              <span className={`text-xl font-black block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
                 {bucket.orders} <span className="text-xs font-bold text-slate-400">tickets</span>
               </span>
-              <span className={`text-[10px] font-semibold ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+              <span className={`text-[10px] font-medium ${isLight ? "text-slate-600" : "text-slate-400"}`}>
                 Rate: {bucket.orderRatePerHour} ord/hr
               </span>
             </div>
 
-            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-slate-800/60 border-slate-700/60"}`}>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Avg Ticket</span>
-              <span className={`text-xl font-extrabold block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+              <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Avg Ticket</span>
+              <span className={`text-xl font-black block leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
                 ${bucket.avgTicketUSD.toFixed(2)}
               </span>
-              <span className={`text-[10px] font-semibold ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+              <span className={`text-[10px] font-medium ${isLight ? "text-slate-600" : "text-slate-400"}`}>
                 ≈ {(bucket.avgTicketUSD * 4100).toLocaleString()} ៛
               </span>
             </div>
 
-            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-slate-800/60 border-slate-700/60"}`}>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Ring-Up Speed</span>
-              <span className="text-xl font-extrabold text-emerald-400 block leading-tight">
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/60 border-slate-700/60"}`}>
+              <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">Avg Prep Speed</span>
+              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 block leading-tight">
                 {bucket.avgTransactionSpeedSec}s <span className="text-xs font-bold text-slate-400">/ ticket</span>
               </span>
-              <span className={`text-[10px] font-semibold ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-                {bucket.avgTransactionSpeedSec <= 40 ? "⚡ High Efficiency" : "Normal Flow"}
+              <span className={`text-[10px] font-medium ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                {bucket.avgTransactionSpeedSec <= 40 ? "⚡ Fast Flow" : "Normal Flow"}
               </span>
             </div>
           </div>
 
-          {/* ── Top-Selling Items in This Window ── */}
-          <div className="space-y-2 mt-5">
+          {/* ── Top 3 Items Sold in This Window ── */}
+          <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold flex items-center gap-1.5 text-amber-500">
-                <Coffee size={14} /> Top Drinks in This Window
+              <span className="text-xs font-extrabold flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                <Coffee size={14} /> Top Items Sold in This Hour
               </span>
-              <span className="text-[10px] font-bold text-slate-400">
-                {bucket.topSellingItems.length} Products
+              <span className="text-[10px] font-bold text-slate-500">
+                Top {Math.min(bucket.topSellingItems.length, 3)}
               </span>
             </div>
 
-            <div className="space-y-2 pt-1">
-              {bucket.topSellingItems.map((item, idx) => (
+            <div className="space-y-1.5">
+              {bucket.topSellingItems.slice(0, 3).map((item, idx) => (
                 <div
                   key={item.name}
-                  className={`p-2.5 rounded-2xl border flex items-center justify-between text-xs ${
-                    isLight ? "bg-slate-50 border-slate-100" : "bg-slate-800/50 border-slate-700/50"
+                  className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                    isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/50 border-slate-700/50"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <span className="font-black text-amber-500 text-xs w-4">#{idx + 1}</span>
+                    <span className="font-black text-amber-600 dark:text-amber-400 text-xs w-4">#{idx + 1}</span>
                     <div className="min-w-0">
                       <span className={`font-bold block truncate leading-tight ${isLight ? "text-slate-900" : "text-white"}`}>
                         {item.name}
                       </span>
-                      <span className={`text-[9.5px] font-medium ${isLight ? "text-slate-400" : "text-slate-500"}`}>
+                      <span className={`text-[9.5px] font-medium ${isLight ? "text-slate-500" : "text-slate-400"}`}>
                         {item.category}
                       </span>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0">
-                    <span className="font-extrabold text-amber-400 block">${item.revenueUSD.toFixed(2)}</span>
+                    <span className={`font-black block ${isLight ? "text-slate-900" : "text-amber-400"}`}>
+                      ${item.revenueUSD.toFixed(2)}
+                    </span>
                     <span className={`text-[9.5px] font-semibold block ${isLight ? "text-slate-500" : "text-slate-400"}`}>
                       {item.qty} units
                     </span>
@@ -183,16 +187,16 @@ export default function HourlyBreakdownDrawer({
             </div>
           </div>
 
-          {/* ── Payment Method Split ── */}
-          <div className="space-y-2 mt-5 border-t pt-4 border-slate-200/60 dark:border-slate-800">
+          {/* ── Payment Method Split (KHQR vs Cash vs Card) ── */}
+          <div className="space-y-2 border-t pt-3 border-slate-200/60 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold flex items-center gap-1.5">
-                <CreditCard size={14} className="text-blue-400" /> Payment Method Mix
+                <CreditCard size={14} className="text-blue-400" /> Payment Breakdown
               </span>
-              <span className="text-[10px] font-bold text-slate-400">Total: ${bucket.revenueUSD.toFixed(2)}</span>
+              <span className="text-[10px] font-bold text-slate-500">Total: ${bucket.revenueUSD.toFixed(2)}</span>
             </div>
 
-            <div className="space-y-1.5 pt-1">
+            <div className="space-y-1.5">
               {/* Stacked Fill Bar */}
               <div className="h-3 rounded-full overflow-hidden flex bg-slate-800">
                 <div style={{ width: `${khqrPct}%` }} className="h-full bg-emerald-500" title={`KHQR: ${khqrPct}%`} />
@@ -205,7 +209,7 @@ export default function HourlyBreakdownDrawer({
                   <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                   <div>
                     <span className="font-bold block">KHQR ({khqrPct}%)</span>
-                    <span className="text-[9.5px] text-slate-400">${bucket.paymentSplit.khqrUSD.toFixed(2)}</span>
+                    <span className="text-[9.5px] text-slate-500 dark:text-slate-400">${bucket.paymentSplit.khqrUSD.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -213,7 +217,7 @@ export default function HourlyBreakdownDrawer({
                   <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
                   <div>
                     <span className="font-bold block">Cash ({cashPct}%)</span>
-                    <span className="text-[9.5px] text-slate-400">${bucket.paymentSplit.cashUSD.toFixed(2)}</span>
+                    <span className="text-[9.5px] text-slate-500 dark:text-slate-400">${bucket.paymentSplit.cashUSD.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -221,10 +225,65 @@ export default function HourlyBreakdownDrawer({
                   <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
                   <div>
                     <span className="font-bold block">Cards ({cardPct}%)</span>
-                    <span className="text-[9.5px] text-slate-400">${bucket.paymentSplit.cardUSD.toFixed(2)}</span>
+                    <span className="text-[9.5px] text-slate-500 dark:text-slate-400">${bucket.paymentSplit.cardUSD.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ── Itemized Tickets List ── */}
+          <div className="space-y-2 border-t pt-3 border-slate-200/60 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                <Receipt size={14} /> Individual Ticket Receipts
+              </span>
+              <span className="text-[10px] font-bold text-slate-500">
+                {bucket.ticketsList?.length || 0} Tickets Logged
+              </span>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {(bucket.ticketsList || []).map((tix) => (
+                <div
+                  key={tix.ticketNumber}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                    isLight ? "bg-slate-50 border-slate-200/80" : "bg-slate-800/40 border-slate-700/50"
+                  }`}
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-xs text-amber-600 dark:text-amber-400">
+                        {tix.ticketNumber}
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400">
+                        {tix.time}
+                      </span>
+                      <span className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-md ${
+                        tix.paymentMethod === "KHQR"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                          : tix.paymentMethod === "Cash"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
+                      }`}>
+                        {tix.paymentMethod}
+                      </span>
+                    </div>
+                    <p className={`text-[10.5px] font-medium truncate mt-0.5 ${isLight ? "text-slate-700" : "text-slate-300"}`}>
+                      {tix.itemsSummary}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className={`font-black text-xs block ${isLight ? "text-slate-900" : "text-white"}`}>
+                      ${tix.totalUSD.toFixed(2)}
+                    </span>
+                    <span className="text-[9px] text-slate-500 block">
+                      by {tix.cashier}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -236,7 +295,7 @@ export default function HourlyBreakdownDrawer({
             onClick={onClose}
             className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 cursor-pointer"
           >
-            Close Breakdown Inspection
+            Close Drill-Down Inspection
           </button>
         </div>
       </div>

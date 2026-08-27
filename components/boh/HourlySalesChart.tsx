@@ -129,7 +129,8 @@ export default function HourlySalesChart({
 
   return (
     <div
-      className={`rounded-3xl border p-5 transition-all relative overflow-hidden flex flex-col justify-between ${
+      onMouseLeave={() => setHoveredIndex(null)}
+      className={`rounded-3xl border p-5 transition-all relative overflow-hidden flex flex-col justify-between max-w-full ${
         isLight ? "bg-white border-slate-200 shadow-sm" : "bg-slate-900 border-slate-800"
       }`}
     >
@@ -137,14 +138,14 @@ export default function HourlySalesChart({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold">
+            <div className="h-7 w-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
               {isWeeklyView ? <Calendar size={16} /> : <BarChart3 size={16} />}
             </div>
             <div>
               <h2 className="text-sm font-extrabold flex items-center gap-2">
                 {isWeeklyView ? "7-Day Revenue & Daily Volume" : "Hourly Velocity & Rush Architecture"}
-                <span className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                  <Flame size={10} className="fill-amber-400" /> Peak {peakBucket.label}
+                <span className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-500/20 text-amber-500 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                  <Flame size={10} className="fill-amber-500" /> Peak {peakBucket.label}
                 </span>
               </h2>
               <p className={`text-[11px] mt-0.5 ${isLight ? "text-slate-500" : "text-slate-400"}`}>
@@ -225,7 +226,7 @@ export default function HourlySalesChart({
         </div>
       </div>
 
-      {/* ── Active Hover / Click Callout ── */}
+      {/* ── Active Hover / Callout (Cleaned up state to prevent ghost tooltips) ── */}
       <div
         className={`mb-3 px-3 py-2 rounded-2xl border flex items-center justify-between text-xs transition-all ${
           isLight
@@ -238,26 +239,26 @@ export default function HourlySalesChart({
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="font-bold">{hoveredBucket.windowTitle || hoveredBucket.label}:</span>
-              <span className="font-black text-amber-500">
+              <span className="font-black text-amber-600 dark:text-amber-400">
                 {formatValue(getValue(hoveredBucket))}
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
                 (${hoveredBucket.revenueUSD.toFixed(2)} · {hoveredBucket.orders} tix)
               </span>
             </div>
-            <div className="flex items-center gap-3 text-[11px] text-slate-400 font-semibold">
+            <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
               <span>Speed: {hoveredBucket.avgTransactionSpeedSec}s</span>
-              <span className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-md font-bold">
+              <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-md font-bold">
                 {hoveredBucket.pctOfDaily}% Mix
               </span>
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-between w-full text-slate-400 text-[11px]">
+          <div className="flex items-center justify-between w-full text-slate-500 dark:text-slate-400 text-[11px]">
             <span className="flex items-center gap-1.5">
-              <Sparkles size={13} className="text-amber-400" /> Click any column to open itemized sales &amp; speed drawer
+              <Sparkles size={13} className="text-amber-500" /> Click any column to open itemized sales &amp; speed drawer
             </span>
-            <span className="font-bold text-amber-400">
+            <span className="font-bold text-amber-700 dark:text-amber-400">
               {isWeeklyView ? "7-Day Total:" : "Today Total:"} ${totalRevenueUSD.toFixed(2)} · {totalOrders} Orders
             </span>
           </div>
@@ -265,7 +266,11 @@ export default function HourlySalesChart({
       </div>
 
       {/* ── Chart Canvas ── */}
-      <div className="relative w-full" style={{ minHeight: "175px" }}>
+      <div
+        className="relative w-full"
+        style={{ minHeight: "175px" }}
+        onMouseLeave={() => setHoveredIndex(null)}
+      >
         {chartStyle === "bar" ? (
           /* ── 1. Column Bars View ── */
           <div className="flex items-end gap-1 sm:gap-2 h-44 w-full pt-4 pb-2">
@@ -289,7 +294,7 @@ export default function HourlySalesChart({
                   {/* Peak Flame */}
                   {isPeak && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 animate-bounce">
-                      <Flame size={12} className="text-amber-400 fill-amber-400 drop-shadow-md" />
+                      <Flame size={12} className="text-amber-500 fill-amber-500 drop-shadow-md" />
                     </div>
                   )}
 
@@ -297,7 +302,7 @@ export default function HourlySalesChart({
                   <span
                     className={`text-[8.5px] font-bold mb-1 transition-all truncate max-w-full ${
                       isSelected || isHovered || isPeak
-                        ? "text-amber-400 font-extrabold scale-110"
+                        ? "text-amber-600 dark:text-amber-400 font-extrabold scale-110"
                         : isLight
                         ? "text-slate-400"
                         : "text-slate-500"
@@ -328,11 +333,13 @@ export default function HourlySalesChart({
                   <span
                     className={`text-[9.5px] mt-1.5 font-bold transition-colors truncate max-w-full ${
                       isSelected
-                        ? "text-amber-400 font-black underline underline-offset-2"
+                        ? "text-amber-600 dark:text-amber-400 font-black underline underline-offset-2"
                         : isPeak
-                        ? "text-amber-400 font-extrabold"
+                        ? "text-amber-600 dark:text-amber-400 font-extrabold"
                         : isHovered
-                        ? "text-white"
+                        ? isLight
+                          ? "text-slate-900"
+                          : "text-white"
                         : isLight
                         ? "text-slate-500"
                         : "text-slate-400"
@@ -413,9 +420,9 @@ export default function HourlySalesChart({
             </svg>
 
             {/* X-Axis labels */}
-            <div className="flex justify-between text-[9.5px] font-bold text-slate-400 px-2 pt-1">
+            <div className="flex justify-between text-[9.5px] font-bold text-slate-500 dark:text-slate-400 px-2 pt-1">
               {activeDataset.map((b) => (
-                <span key={b.label} className={b.label === peakBucket.label ? "text-amber-400 font-black" : ""}>
+                <span key={b.label} className={b.label === peakBucket.label ? "text-amber-600 dark:text-amber-400 font-black" : ""}>
                   {b.label}
                 </span>
               ))}
@@ -427,7 +434,7 @@ export default function HourlySalesChart({
       {/* ── Bottom Scale Indicators ── */}
       <div
         className={`flex items-center justify-between text-[9.5px] font-semibold pt-3 border-t mt-2 ${
-          isLight ? "border-slate-100 text-slate-400" : "border-slate-800 text-slate-500"
+          isLight ? "border-slate-100 text-slate-500" : "border-slate-800 text-slate-400"
         }`}
       >
         <span className="flex items-center gap-1.5">
@@ -435,7 +442,7 @@ export default function HourlySalesChart({
           Metric: <strong>{metric}</strong>
         </span>
         <span className="font-mono">Peak: {formatValue(maxValue)}</span>
-        <span className="flex items-center gap-1 text-amber-400 font-bold">
+        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
           <Clock size={11} /> {isWeeklyView ? "7-Day Daily Granularity" : "16 Hourly Operating Windows"}
         </span>
       </div>
