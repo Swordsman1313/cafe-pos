@@ -990,12 +990,12 @@ export default function PosRegisterPage() {
       prev.map((o) =>
         o.id === orderToVoid.id
           ? {
-              ...o,
-              status: "Void" as const,
-              voidReason: selectedVoidReason,
-              voidedAt: voidTime,
-              voidAuthorizedBy: "Manager",
-            }
+            ...o,
+            status: "Void" as const,
+            voidReason: selectedVoidReason,
+            voidedAt: voidTime,
+            voidAuthorizedBy: "Manager",
+          }
           : o
       )
     );
@@ -1003,12 +1003,12 @@ export default function PosRegisterPage() {
       setInspectingOrder((prev) =>
         prev
           ? {
-              ...prev,
-              status: "Void" as const,
-              voidReason: selectedVoidReason,
-              voidedAt: voidTime,
-              voidAuthorizedBy: "Manager",
-            }
+            ...prev,
+            status: "Void" as const,
+            voidReason: selectedVoidReason,
+            voidedAt: voidTime,
+            voidAuthorizedBy: "Manager",
+          }
           : null
       );
     }
@@ -1056,7 +1056,7 @@ export default function PosRegisterPage() {
     showNotification("Label / Ticket Printed 🏷️", `Kitchen ticket #${order.ticketNumber} reprinted.`, "info", 2000);
     try {
       window.print();
-    } catch {}
+    } catch { }
   };
 
   // Category-Aware Modifier Determination
@@ -1072,10 +1072,10 @@ export default function PosRegisterPage() {
             className="flex h-7.5 w-7.5 items-center justify-center rounded-xl text-white font-black text-xs shadow-sm"
             style={{ background: "#4A2E1F" }}
           >
-            ☕
+            K
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xs font-black text-stone-900 tracking-tight">The Daily Drip</h1>
+            <h1 className="text-xs font-black text-stone-900 tracking-tight">Artisan Roast</h1>
             <div className="h-3.5 w-px bg-stone-200" />
             <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
               <Clock size={11} className="text-stone-500" />
@@ -1134,9 +1134,8 @@ export default function PosRegisterPage() {
           </button>
 
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
-              isOnline ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-amber-50 text-amber-900 border-amber-300 animate-pulse"
-            }`}
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border ${isOnline ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-amber-50 text-amber-900 border-amber-300 animate-pulse"
+              }`}
           >
             <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`} />
             <span>{isOnline ? "Online" : `Offline (${offlineQueueCount})`}</span>
@@ -1184,11 +1183,10 @@ export default function PosRegisterPage() {
                               soundFX.playBlip(900);
                               setCategory(cat.id);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-black text-xs transition-all border shrink-0 cursor-pointer ${
-                              isActive
-                                ? "text-white shadow-xs border-transparent"
-                                : "bg-white text-stone-600 border-stone-200/80 hover:border-stone-400 hover:bg-stone-50"
-                            }`}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-black text-xs transition-all border shrink-0 cursor-pointer ${isActive
+                              ? "text-white shadow-xs border-transparent"
+                              : "bg-white text-stone-600 border-stone-200/80 hover:border-stone-400 hover:bg-stone-50"
+                              }`}
                             style={isActive ? { background: "#4A2E1F" } : {}}
                           >
                             <Icon size={12} />
@@ -1247,10 +1245,10 @@ export default function PosRegisterPage() {
                                 product.category === "espresso"
                                   ? "linear-gradient(135deg, #784A30, #4A2E1F)"
                                   : product.category === "tea"
-                                  ? "linear-gradient(135deg, #447755, #254733)"
-                                  : product.category === "frappe"
-                                  ? "linear-gradient(135deg, #4A7A9E, #234E6F)"
-                                  : "linear-gradient(135deg, #C28B5E, #8C5933)",
+                                    ? "linear-gradient(135deg, #447755, #254733)"
+                                    : product.category === "frappe"
+                                      ? "linear-gradient(135deg, #4A7A9E, #234E6F)"
+                                      : "linear-gradient(135deg, #C28B5E, #8C5933)",
                             }}
                           >
                             <ProductIcon size={18} />
@@ -1298,11 +1296,10 @@ export default function PosRegisterPage() {
                             key={st}
                             type="button"
                             onClick={() => setOrderFilterStatus(st)}
-                            className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                              orderFilterStatus === st
-                                ? "bg-white text-stone-900 shadow-2xs font-black"
-                                : "text-stone-500 hover:text-stone-800"
-                            }`}
+                            className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${orderFilterStatus === st
+                              ? "bg-white text-stone-900 shadow-2xs font-black"
+                              : "text-stone-500 hover:text-stone-800"
+                              }`}
                           >
                             {st}
                           </button>
@@ -1361,7 +1358,7 @@ export default function PosRegisterPage() {
                   {/* Dedicated Full-View Table */}
                   <div className="flex-1 overflow-auto bg-white rounded-2xl border border-stone-200 shadow-xs">
                     {completedOrders.filter((o) => orderFilterStatus === "ALL" || o.status === orderFilterStatus).length === 0 &&
-                    !(hasHeldOrder && (orderFilterStatus === "ALL" || orderFilterStatus === "On Hold")) ? (
+                      !(hasHeldOrder && (orderFilterStatus === "ALL" || orderFilterStatus === "On Hold")) ? (
                       <div className="py-24 text-center text-stone-400 text-xs">
                         No orders match the selected filter.
                       </div>
@@ -1387,9 +1384,8 @@ export default function PosRegisterPage() {
                                 <tr
                                   key={ord.id}
                                   onClick={() => setInspectingOrder(ord)}
-                                  className={`hover:bg-amber-50/50 cursor-pointer transition-colors ${
-                                    isSelected ? "bg-amber-100/60 font-medium" : ""
-                                  }`}
+                                  className={`hover:bg-amber-50/50 cursor-pointer transition-colors ${isSelected ? "bg-amber-100/60 font-medium" : ""
+                                    }`}
                                 >
                                   <td className="py-3 px-3 font-black text-stone-900">
                                     <span className="bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200 text-stone-800">
@@ -1412,13 +1408,12 @@ export default function PosRegisterPage() {
                                   </td>
                                   <td className="py-3 px-3">
                                     <span
-                                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase inline-block ${
-                                        ord.status === "Void"
-                                          ? "bg-rose-100 text-rose-800 border border-rose-200"
-                                          : ord.status === "On Hold"
+                                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase inline-block ${ord.status === "Void"
+                                        ? "bg-rose-100 text-rose-800 border border-rose-200"
+                                        : ord.status === "On Hold"
                                           ? "bg-amber-100 text-amber-900 border border-amber-200"
                                           : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                      }`}
+                                        }`}
                                     >
                                       {ord.status || "Completed"}
                                     </span>
@@ -1467,26 +1462,24 @@ export default function PosRegisterPage() {
                         setActiveNav("register");
                         showNotification("Table Assigned", `Ticket assigned to ${tbl.name}`, "info");
                       }}
-                      className={`p-4 rounded-3xl border-2 text-left transition-all cursor-pointer ${
-                        selectedTable === tbl.name
-                          ? "border-[#4A2E1F] bg-amber-50"
-                          : tbl.status === "occupied"
+                      className={`p-4 rounded-3xl border-2 text-left transition-all cursor-pointer ${selectedTable === tbl.name
+                        ? "border-[#4A2E1F] bg-amber-50"
+                        : tbl.status === "occupied"
                           ? "border-amber-300 bg-amber-50/40"
                           : tbl.status === "reserved"
-                          ? "border-indigo-200 bg-indigo-50/40"
-                          : "border-stone-200 bg-white hover:border-stone-400"
-                      }`}
+                            ? "border-indigo-200 bg-indigo-50/40"
+                            : "border-stone-200 bg-white hover:border-stone-400"
+                        }`}
                     >
                       <div className="flex justify-between items-start">
                         <span className="font-black text-sm text-stone-900">{tbl.name}</span>
                         <span
-                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            tbl.status === "occupied"
-                              ? "bg-amber-100 text-amber-800"
-                              : tbl.status === "reserved"
+                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${tbl.status === "occupied"
+                            ? "bg-amber-100 text-amber-800"
+                            : tbl.status === "reserved"
                               ? "bg-indigo-100 text-indigo-800"
                               : "bg-emerald-100 text-emerald-800"
-                          }`}
+                            }`}
                         >
                           {tbl.status}
                         </span>
@@ -1560,9 +1553,8 @@ export default function PosRegisterPage() {
                             key={temp}
                             type="button"
                             onClick={() => handleSelectModifierChip("notes", temp)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
-                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                            }`}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                              }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
                           >
                             {temp}
@@ -1587,9 +1579,8 @@ export default function PosRegisterPage() {
                             key={s.val}
                             type="button"
                             onClick={() => handleSelectModifierChip("size", s.val)}
-                            className={`h-8 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center px-1.5 truncate ${
-                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                            }`}
+                            className={`h-8 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center px-1.5 truncate ${isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                              }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
                           >
                             {s.label}
@@ -1610,9 +1601,8 @@ export default function PosRegisterPage() {
                             key={sg}
                             type="button"
                             onClick={() => handleSelectModifierChip("sweetness", sg)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
-                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                            }`}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                              }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
                           >
                             {sg}
@@ -1633,9 +1623,8 @@ export default function PosRegisterPage() {
                             key={ic}
                             type="button"
                             onClick={() => handleSelectModifierChip("ice", ic)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
-                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                            }`}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                              }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
                           >
                             {ic}
@@ -1658,9 +1647,8 @@ export default function PosRegisterPage() {
                             key={w}
                             type="button"
                             onClick={() => handleSelectModifierChip("notes", w)}
-                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${
-                              isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
-                            }`}
+                            className={`h-8 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center px-2 truncate ${isSel ? "text-white shadow-2xs border-transparent" : "bg-stone-50 border-stone-200/90 text-stone-700 hover:bg-stone-100"
+                              }`}
                             style={isSel ? { background: "#4A2E1F" } : {}}
                           >
                             {w}
@@ -1682,9 +1670,8 @@ export default function PosRegisterPage() {
                 soundFX.playBlip(880);
                 setActiveNav("register");
               }}
-              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-                activeNav === "register" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-              }`}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${activeNav === "register" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+                }`}
             >
               <Store size={16} className={activeNav === "register" ? "stroke-[2.5]" : "stroke-[1.8]"} />
               <span className="text-[10px] tracking-tight mt-0.5">Sales</span>
@@ -1699,9 +1686,8 @@ export default function PosRegisterPage() {
                 soundFX.playBlip(880);
                 setActiveNav("orders");
               }}
-              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-                activeNav === "orders" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-              }`}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${activeNav === "orders" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+                }`}
             >
               <div className="relative">
                 <ClipboardList size={16} className={activeNav === "orders" ? "stroke-[2.5]" : "stroke-[1.8]"} />
@@ -1723,9 +1709,8 @@ export default function PosRegisterPage() {
                 soundFX.playBlip(880);
                 setActiveNav("tables");
               }}
-              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-                activeNav === "tables" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-              }`}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${activeNav === "tables" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+                }`}
             >
               <Grid3X3 size={16} className={activeNav === "tables" ? "stroke-[2.5]" : "stroke-[1.8]"} />
               <span className="text-[10px] tracking-tight mt-0.5">Tables</span>
@@ -1740,9 +1725,8 @@ export default function PosRegisterPage() {
                 soundFX.playBlip(880);
                 setActiveNav("customers");
               }}
-              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${
-                activeNav === "customers" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
-              }`}
+              className={`flex min-w-[52px] sm:min-w-[60px] h-9.5 flex-col items-center justify-center rounded-xl transition-all cursor-pointer px-2 py-0.5 relative ${activeNav === "customers" ? "text-[#4A2E1F] font-black" : "text-stone-400 hover:text-stone-700"
+                }`}
             >
               <Users size={16} className={activeNav === "customers" ? "stroke-[2.5]" : "stroke-[1.8]"} />
               <span className="text-[10px] tracking-tight mt-0.5">Customers</span>
@@ -1806,13 +1790,12 @@ export default function PosRegisterPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-black text-sm text-stone-900">Ticket #{inspectingOrder.ticketNumber}</span>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                          inspectingOrder.status === "Void"
-                            ? "bg-rose-100 text-rose-800 border border-rose-200"
-                            : inspectingOrder.status === "On Hold"
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${inspectingOrder.status === "Void"
+                          ? "bg-rose-100 text-rose-800 border border-rose-200"
+                          : inspectingOrder.status === "On Hold"
                             ? "bg-amber-100 text-amber-900 border border-amber-200"
                             : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                        }`}
+                          }`}
                       >
                         {inspectingOrder.status || "Completed"}
                       </span>
@@ -1981,9 +1964,8 @@ export default function PosRegisterPage() {
                         soundFX.playBlip(900);
                         setOrderChannel(ch);
                       }}
-                      className={`py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                        orderChannel === ch ? "bg-white text-stone-900 shadow-2xs" : "text-stone-400 hover:text-stone-700"
-                      }`}
+                      className={`py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${orderChannel === ch ? "bg-white text-stone-900 shadow-2xs" : "text-stone-400 hover:text-stone-700"
+                        }`}
                     >
                       {ch}
                     </button>
@@ -2018,16 +2000,16 @@ export default function PosRegisterPage() {
                         item.sweetness === "0%"
                           ? "No Sugar"
                           : item.sweetness === "30%"
-                          ? "Less Sweet (30%)"
-                          : item.sweetness === "50%"
-                          ? "Half Sweet (50%)"
-                          : item.sweetness === "70%"
-                          ? "70% Sugar"
-                          : item.sweetness === "100%"
-                          ? "Normal Sweet"
-                          : item.sweetness
-                          ? `${item.sweetness} Sugar`
-                          : "",
+                            ? "Less Sweet (30%)"
+                            : item.sweetness === "50%"
+                              ? "Half Sweet (50%)"
+                              : item.sweetness === "70%"
+                                ? "70% Sugar"
+                                : item.sweetness === "100%"
+                                  ? "Normal Sweet"
+                                  : item.sweetness
+                                    ? `${item.sweetness} Sugar`
+                                    : "",
                         item.ice,
                       ]
                         .filter(Boolean)
@@ -2069,18 +2051,16 @@ export default function PosRegisterPage() {
                               soundFX.playBlip(950);
                               setActiveCartId(item.cartId);
                             }}
-                            className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${
-                              isSelected
-                                ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
-                                : "bg-white hover:bg-stone-50/90 border-l-4 border-transparent"
-                            }`}
+                            className={`relative z-10 flex items-center py-2.5 px-3 border-b border-stone-100 transition-colors cursor-pointer w-full ${isSelected
+                              ? "bg-[#F5EFEB] text-stone-900 border-l-4 border-[#4A2E1F]"
+                              : "bg-white hover:bg-stone-50/90 border-l-4 border-transparent"
+                              }`}
                           >
                             {/* PRODUCT (flex-1) */}
                             <div className="flex-1 min-w-0 pr-2">
                               <span
-                                className={`text-xs md:text-sm font-semibold truncate block leading-tight ${
-                                  isSelected ? "text-stone-950 font-bold" : "text-stone-900"
-                                }`}
+                                className={`text-xs md:text-sm font-semibold truncate block leading-tight ${isSelected ? "text-stone-950 font-bold" : "text-stone-900"
+                                  }`}
                               >
                                 {item.name}
                               </span>
@@ -2291,9 +2271,8 @@ export default function PosRegisterPage() {
                         setShowNonCashOptions(false);
                         setShowPromoOptions(true);
                       }}
-                      className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                        discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
-                      }`}
+                      className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${discountUSD > 0 ? "bg-amber-100 border-amber-400 text-amber-950" : "bg-white border-stone-200 text-stone-800 hover:bg-stone-50"
+                        }`}
                     >
                       <Tag size={13} className={discountUSD > 0 ? "text-amber-800" : "text-stone-600"} />
                       <span>PROMOTION</span>
@@ -2315,7 +2294,7 @@ export default function PosRegisterPage() {
                         soundFX.playBlip(800);
                         try {
                           window.print();
-                        } catch {}
+                        } catch { }
                       }}
                       className="h-11 sm:h-12 rounded-xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
                     >
@@ -2361,11 +2340,10 @@ export default function PosRegisterPage() {
                         type="button"
                         onClick={handleDirectHoldOrder}
                         title={cart.length > 0 ? "Hold active ticket (1-tap)" : "Cart is empty"}
-                        className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${
-                          cart.length > 0
-                            ? "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
-                            : "bg-white border-stone-200 text-stone-400 hover:bg-stone-50"
-                        }`}
+                        className={`h-11 sm:h-12 rounded-xl border font-bold text-[9px] sm:text-[10px] uppercase flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs ${cart.length > 0
+                          ? "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+                          : "bg-white border-stone-200 text-stone-400 hover:bg-stone-50"
+                          }`}
                       >
                         <PauseCircle size={13} className={cart.length > 0 ? "text-amber-700" : "text-stone-400"} />
                         <span>HOLD (0)</span>
@@ -2419,9 +2397,8 @@ export default function PosRegisterPage() {
               <button
                 type="button"
                 onClick={() => setActiveCashField("USD")}
-                className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
-                  activeCashField === "USD" ? "border-emerald-600 bg-emerald-50/50" : "border-stone-200 bg-white"
-                }`}
+                className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${activeCashField === "USD" ? "border-emerald-600 bg-emerald-50/50" : "border-stone-200 bg-white"
+                  }`}
               >
                 <span className="text-[10px] font-black text-stone-500 uppercase">Received USD ($)</span>
                 <span className="text-lg font-black text-stone-900 block mt-0.5">
@@ -2432,9 +2409,8 @@ export default function PosRegisterPage() {
               <button
                 type="button"
                 onClick={() => setActiveCashField("KHR")}
-                className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
-                  activeCashField === "KHR" ? "border-emerald-600 bg-emerald-50/50" : "border-stone-200 bg-white"
-                }`}
+                className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${activeCashField === "KHR" ? "border-emerald-600 bg-emerald-50/50" : "border-stone-200 bg-white"
+                  }`}
               >
                 <span className="text-[10px] font-black text-stone-500 uppercase">Received KHR (៛)</span>
                 <span className="text-lg font-black text-stone-900 block mt-0.5">
@@ -2506,11 +2482,10 @@ export default function PosRegisterPage() {
                             soundFX.playBlip(880);
                             setCustomUSDChange(0);
                           }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                            effectiveUSDGiven === 0
-                              ? "bg-emerald-700 text-white shadow-xs"
-                              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
-                          }`}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${effectiveUSDGiven === 0
+                            ? "bg-emerald-700 text-white shadow-xs"
+                            : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+                            }`}
                         >
                           $0 (All in Riel)
                         </button>
@@ -2525,11 +2500,10 @@ export default function PosRegisterPage() {
                                 soundFX.playBlip(900);
                                 setCustomUSDChange(d);
                               }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                                effectiveUSDGiven === d
-                                  ? "bg-emerald-700 text-white shadow-xs"
-                                  : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
-                              }`}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${effectiveUSDGiven === d
+                                ? "bg-emerald-700 text-white shadow-xs"
+                                : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+                                }`}
                             >
                               ${d}
                             </button>
@@ -2542,11 +2516,10 @@ export default function PosRegisterPage() {
                               soundFX.playBlip(900);
                               setCustomUSDChange(maxDollarBills);
                             }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                              effectiveUSDGiven === maxDollarBills
-                                ? "bg-emerald-700 text-white shadow-xs"
-                                : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
-                            }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${effectiveUSDGiven === maxDollarBills
+                              ? "bg-emerald-700 text-white shadow-xs"
+                              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+                              }`}
                           >
                             ${maxDollarBills} (Max)
                           </button>
@@ -2951,18 +2924,16 @@ export default function PosRegisterPage() {
                   <button
                     type="button"
                     onClick={() => setPromoCustomType("PERCENT")}
-                    className={`px-2 py-0.5 rounded-md cursor-pointer ${
-                      promoCustomType === "PERCENT" ? "bg-white text-stone-900 font-black shadow-2xs" : "text-stone-500"
-                    }`}
+                    className={`px-2 py-0.5 rounded-md cursor-pointer ${promoCustomType === "PERCENT" ? "bg-white text-stone-900 font-black shadow-2xs" : "text-stone-500"
+                      }`}
                   >
                     % Percent
                   </button>
                   <button
                     type="button"
                     onClick={() => setPromoCustomType("USD")}
-                    className={`px-2 py-0.5 rounded-md cursor-pointer ${
-                      promoCustomType === "USD" ? "bg-white text-stone-900 font-black shadow-2xs" : "text-stone-500"
-                    }`}
+                    className={`px-2 py-0.5 rounded-md cursor-pointer ${promoCustomType === "USD" ? "bg-white text-stone-900 font-black shadow-2xs" : "text-stone-500"
+                      }`}
                   >
                     $ Dollar
                   </button>
@@ -3420,9 +3391,8 @@ export default function PosRegisterPage() {
                       showNotification("Staff Switched", `Logged in as ${staff.name} (${staff.role})`, "success");
                       setShowCashierModal(false);
                     }}
-                    className={`w-full p-2 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
-                      currentStaff.id === staff.id ? "bg-amber-50 border-amber-300" : "bg-white border-stone-200 hover:bg-stone-50"
-                    }`}
+                    className={`w-full p-2 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${currentStaff.id === staff.id ? "bg-amber-50 border-amber-300" : "bg-white border-stone-200 hover:bg-stone-50"
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <div className={`h-5 w-5 rounded-full ${staff.avatarBg} text-white flex items-center justify-center text-[9px] font-black`}>
@@ -3496,11 +3466,10 @@ export default function PosRegisterPage() {
                   key={reason.id}
                   type="button"
                   onClick={() => setSelectedVoidReason(reason.id)}
-                  className={`w-full p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                    selectedVoidReason === reason.id
-                      ? "bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-2xs"
-                      : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
-                  }`}
+                  className={`w-full p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${selectedVoidReason === reason.id
+                    ? "bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-2xs"
+                    : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"
+                    }`}
                 >
                   <div className="flex items-center justify-between text-xs font-black">
                     <span>{reason.label}</span>
@@ -3668,9 +3637,8 @@ export default function PosRegisterPage() {
       {/* General Toast */}
       {generalToast && (
         <div
-          className={`fixed bottom-16 right-5 z-[80] flex items-center gap-2.5 rounded-2xl px-4 py-3 text-white shadow-xl animate-in slide-in-from-bottom-2 duration-200 ${
-            generalToast.type === "warning" ? "bg-amber-600" : generalToast.type === "info" ? "bg-stone-900" : "bg-emerald-600"
-          }`}
+          className={`fixed bottom-16 right-5 z-[80] flex items-center gap-2.5 rounded-2xl px-4 py-3 text-white shadow-xl animate-in slide-in-from-bottom-2 duration-200 ${generalToast.type === "warning" ? "bg-amber-600" : generalToast.type === "info" ? "bg-stone-900" : "bg-emerald-600"
+            }`}
         >
           {generalToast.type === "warning" ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}
           <div className="text-xs">
