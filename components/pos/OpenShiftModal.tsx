@@ -18,6 +18,7 @@ export interface OpenShiftModalProps {
   businessDate: string;
   previousShiftNumber?: number;
   onOpenShift: (shift: ShiftState) => void;
+  onClose?: () => void;
 }
 
 export function OpenShiftModal({
@@ -25,6 +26,7 @@ export function OpenShiftModal({
   businessDate,
   previousShiftNumber = 0,
   onOpenShift,
+  onClose,
 }: OpenShiftModalProps) {
   const [openShiftStep, setOpenShiftStep] = useState<"login" | "float" | "supervisor">("login");
   const [selectedStaff, setSelectedStaff] = useState<StaffUser>(STAFF_LIST[0]);
@@ -107,7 +109,7 @@ export function OpenShiftModal({
               <Coffee size={28} />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">Artisan Roast Café</h1>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">The Daily Drip</h1>
               <p className="text-xs font-bold text-slate-400 mt-0.5">Enter 4-digit Cashier Passcode</p>
             </div>
           </div>

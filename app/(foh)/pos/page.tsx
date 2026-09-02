@@ -56,6 +56,7 @@ import { soundFX } from "@/lib/sound";
 import { offlineStorage } from "@/lib/offline-sync";
 import { TouchNumpadDialog } from "@/components/pos/TouchNumpadDialog";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
+import { OpenShiftModal } from "@/components/pos/OpenShiftModal";
 import { EndShiftModal } from "@/components/pos/EndShiftModal";
 import { EndDayModal } from "@/components/pos/EndDayModal";
 
@@ -604,6 +605,7 @@ export default function PosRegisterPage() {
   const [couponCode, setCouponCode] = useState<string>("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState<boolean>(false);
   const [showEndShiftModal, setShowEndShiftModal] = useState<boolean>(false);
   const [showEndDayModal, setShowEndDayModal] = useState<boolean>(false);
   const [showOperationsModal, setShowOperationsModal] = useState<boolean>(false);
@@ -3167,6 +3169,37 @@ export default function PosRegisterPage() {
         />
       )}
 
+      {/* 6.5 Open Shift & Float Entry Modal */}
+      {showOpenShiftModal && (
+        <OpenShiftModal
+          isOpen={showOpenShiftModal}
+          businessDate={shift.businessDate}
+          previousShiftNumber={shift.shiftNumber || 1}
+          onClose={() => setShowOpenShiftModal(false)}
+          onOpenShift={(newShift) => {
+            soundFX.playSuccess();
+            setShift({
+              cashierName: newShift.cashierName,
+              openedAt: newShift.startedAt || new Date().toISOString(),
+              businessDate: newShift.businessDate,
+              shiftNumber: newShift.shiftNumber,
+              floatUSD: newShift.floatUSD,
+              floatKHR: newShift.floatKHR,
+              totalCashSalesUSD: 0,
+              totalQRSalesUSD: 0,
+              orderCount: 0,
+              isUnclosed: false,
+            });
+            setShowOpenShiftModal(false);
+            showNotification(
+              "Shift Opened",
+              `Shift #${newShift.shiftNumber} started for ${newShift.cashierName} with $${newShift.floatUSD.toFixed(2)} USD float.`,
+              "success"
+            );
+          }}
+        />
+      )}
+
       {/* 7. End Shift Z-Report Modal */}
       {showEndShiftModal && (
         <EndShiftModal
@@ -3174,18 +3207,10 @@ export default function PosRegisterPage() {
           shift={shift}
           heldOrders={singleHeldOrder ? [singleHeldOrder] : []}
           onClose={() => setShowEndShiftModal(false)}
-          onHandoverShift={(reconciled) => {
+          onHandoverShift={(_reconciled) => {
             soundFX.playSuccess();
-            setShift((prev) => ({
-              ...prev,
-              shiftNumber: (prev.shiftNumber || 1) + 1,
-              totalCashSalesUSD: 0,
-              totalQRSalesUSD: 0,
-              orderCount: 0,
-              openedAt: new Date().toISOString(),
-            }));
             setShowEndShiftModal(false);
-            showNotification("Shift Handover Complete", `Shift #${(shift.shiftNumber || 1) + 1} started.`, "success");
+            setShowOpenShiftModal(true);
           }}
           onToast={(t) => showNotification(t.method, t.amount, "success")}
         />
